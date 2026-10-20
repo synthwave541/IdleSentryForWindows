@@ -1,5 +1,4 @@
 <p align="center">
-  <a href="https://github.com/synthwave541/IdleSentryForWindows/releases/latest"><img src="https://img.shields.io/github/v/release/synthwave541/IdleSentryForWindows?label=release" alt="Latest release"></a>
   <img src="IdleSentry%20for%20Windows/IdleSentry.png" width="72" alt="IdleSentry shield and clock logo">
 </p>
 
@@ -8,6 +7,7 @@
 <p align="center">Close the apps you choose when you step away.</p>
 
 <p align="center">
+  <a href="https://github.com/synthwave541/IdleSentryForWindows/releases/latest"><img src="https://img.shields.io/github/v/release/synthwave541/IdleSentryForWindows?label=release" alt="Latest release"></a>
   <a href="https://github.com/synthwave541/IdleSentryForWindows/actions/workflows/build.yml"><img src="https://github.com/synthwave541/IdleSentryForWindows/actions/workflows/build.yml/badge.svg" alt="Windows build"></a>
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4" alt="Windows 10 and 11">
   <img src="https://img.shields.io/badge/architecture-x64%20%7C%20ARM64-555" alt="x64 and ARM64">
