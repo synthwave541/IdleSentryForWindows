@@ -11,8 +11,8 @@
     <!-- Assembly Metadata matching macOS release -->
     <AssemblyName>IdleSentry</AssemblyName>
     <RootNamespace>IdleSentry</RootNamespace>
-    <!-- Matches ../IdleSentry/version.info. The UI reads this assembly metadata. -->
-    <Version>1.0.10</Version>
+    <!-- Windows patch version. The UI and installer read this assembly metadata. -->
+    <Version>1.0.13</Version>
     <Product>IdleSentry</Product>
     <Company>Zennoris</Company>
     <Copyright>Copyright © 2026 Zennoris. All rights reserved.</Copyright>

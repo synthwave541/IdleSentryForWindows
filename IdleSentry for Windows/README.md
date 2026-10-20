@@ -29,6 +29,17 @@ window close, waits briefly, and then terminates processes that remain. Force
 Quit terminates immediately. Both methods can lose unsaved work; do not describe
 Standard Quit as a guarantee that data is saved.
 
+The dispatcher snapshots settings and publishes completed process states. A
+single asynchronous worker scans and closes apps; timer callbacks cannot start
+overlapping close attempts. All processes in an app share one 2.5-second grace
+period. Notifications are delivered after publishing results and cannot abort
+monitoring when the notification area is unavailable.
+
+The tray icon is explicitly registered even for `--background` startup, retained
+while the window is hidden, and retried if initial registration fails. Windows
+controls whether an icon appears beside the clock or in the overflow menu; the
+user can drag IdleSentry out of overflow or enable it in Taskbar settings.
+
 Preferences are stored in `%LOCALAPPDATA%\IdleSentry\settings.json`, including
 when running the portable executable. The app can create a current-user login
 startup entry when enabled in its settings.
@@ -58,7 +69,8 @@ dotnet run --project './IdleSentry.ChooserTests/IdleSentry.ChooserTests.csproj' 
 ```
 
 The sibling test project checks discovery fixtures, navigation, accessibility
-selection, badge placement, Windows accent bindings, and countdown presentation.
+selection, badge placement, Windows accent bindings, countdown presentation,
+real process closure, notification-failure recovery and tray registration.
 It uses sample state for UI checks and is excluded from application packages.
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for manual verification guidance.
 

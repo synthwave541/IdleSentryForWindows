@@ -502,7 +502,16 @@
                     <ui:SymbolIcon Symbol="Apps24" />
                 </ui:NavigationViewItem.Icon>
                 <ui:NavigationViewItem.InfoBadge>
-                    <ui:InfoBadge Value="{Binding MonitoredApps.Count}" Margin="4,0,8,0" VerticalAlignment="Center" Visibility="{Binding MonitoredApps.Count, Converter={StaticResource IntToVisibilityConverter}}" />
+                    <ui:InfoBadge x:Name="RunningAppsBadge" Value="{Binding RunningAppsCount}" Width="16" Height="16" MinWidth="16" MinHeight="16" Padding="0" Margin="4,0,8,0" VerticalAlignment="Center" Background="#DC2626" Foreground="White" Visibility="{Binding RunningAppsCount, Converter={StaticResource IntToVisibilityConverter}}" AutomationProperties.Name="{Binding RunningAppsCount, StringFormat='Running monitored apps: {0}'}">
+                        <ui:InfoBadge.Template>
+                            <ControlTemplate TargetType="ui:InfoBadge">
+                                <Grid Width="16" Height="16">
+                                    <Ellipse x:Name="BadgeCircle" Fill="{TemplateBinding Background}" />
+                                    <TextBlock Text="{TemplateBinding Value}" Foreground="{TemplateBinding Foreground}" FontSize="9" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Grid>
+                            </ControlTemplate>
+                        </ui:InfoBadge.Template>
+                    </ui:InfoBadge>
                 </ui:NavigationViewItem.InfoBadge>
             </ui:NavigationViewItem>
             <ui:NavigationViewItem x:Name="NavRules" Content="Inactivity Rules" TargetPageTag="2" TargetPageType="{x:Type local:InactivityRulesPage}" IsPaneOpen="True" Margin="0,2" Height="40">

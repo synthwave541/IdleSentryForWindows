@@ -92,7 +92,8 @@ internal static class StatusPresentationChecks
         openTrayMenu.Invoke(application, new object[] { trayMenu, new RoutedEventArgs() });
         check(!trayMenu.Items.OfType<MenuItem>().Any(item => Regex.IsMatch(item.Header?.ToString() ?? string.Empty, @"\d{2,}:\d{2}")),
             "paused tray menu does not show a countdown");
-        var window = new MainWindow(Snapshot());
+        var windowState = Snapshot();
+        var window = new MainWindow(windowState);
         var root = (FrameworkElement)window.Content;
         Layout(root, 960, 680);
         var timer = (TextBlock)window.FindName("ActivityCountdown");
@@ -141,6 +142,32 @@ internal static class StatusPresentationChecks
         var badge = (FrameworkElement)appsItem.InfoBadge!;
         check(badge.TranslatePoint(new Point(), appsItem).X > appsItem.ActualWidth / 2,
             "app count badge remains on the right side of the open navigation item");
+        var circle = (System.Windows.Shapes.Ellipse)((Control)badge).Template.FindName("BadgeCircle", badge);
+        check(circle.ActualWidth == 16 && circle.ActualHeight == 16,
+            "running-app badge is a true 16 by 16 circle");
+        check(circle.Fill is SolidColorBrush badgeFill && badgeFill.Color == Color.FromRgb(220, 38, 38)
+            && ((Wpf.Ui.Controls.InfoBadge)badge).Foreground is SolidColorBrush badgeText && badgeText.Color == Colors.White,
+            "running-app badge has a red background and white number");
+        var applyStates = typeof(AppState).GetMethod("ApplyStates", BindingFlags.NonPublic | BindingFlags.Instance)!;
+        applyStates.Invoke(windowState, new object[] { new List<AppRunningState>
+        {
+            new() { Name = "Example Editor", Path = @"C:\Preview\editor.exe", IsRunning = false },
+        } });
+        Layout(root, 960, 680);
+        check(windowState.MonitoredApps.Count == 1 && badge.Visibility == Visibility.Collapsed,
+            "configured but stopped apps leave no sidebar badge");
+        applyStates.Invoke(windowState, new object[] { new List<AppRunningState>
+        {
+            new() { Name = "Example Editor", Path = @"C:\Preview\editor.exe", IsRunning = true },
+            new() { Name = "Example Browser", Path = @"C:\Preview\browser.exe", IsRunning = true },
+        } });
+        Layout(root, 960, 680);
+        check(badge.Visibility == Visibility.Visible && ((Wpf.Ui.Controls.InfoBadge)badge).Value == "2",
+            "badge reappears and counts running apps rather than configured entries");
+        applyStates.Invoke(windowState, new object[] { Snapshot().RunningStates.ToList() });
+        Layout(root, 960, 680);
+        check(((Wpf.Ui.Controls.InfoBadge)badge).Value == "1" && circle.ActualWidth == circle.ActualHeight,
+            "badge returns to one running app without changing its circular shape");
         check(activityBar.TransformToAncestor(root).Transform(new Point()).X < 220,
             "countdown is attached to the sidebar rather than the content canvas");
         check(timer.Foreground is SolidColorBrush timerBrush && timerBrush.Color == Color.FromRgb(251, 191, 36),
@@ -177,6 +204,7 @@ internal static class StatusPresentationChecks
         SavePreview(root, previewDirectory, "dashboard-paused.png", 960, 680);
         // MainWindow normally hides on close; detach the snapshot instead of starting its app lifecycle.
         window.Content = null;
+        MonitoringLifecycleChecks.Run(application, check);
         application.Shutdown();
     }
 

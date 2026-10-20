@@ -9,7 +9,9 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
@@ -116,7 +118,7 @@ namespace IdleSentry
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
-    public class AppState : INotifyPropertyChanged
+    public class AppState : INotifyPropertyChanged, IDisposable
     {
         private static readonly string SettingsDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "IdleSentry");
@@ -328,20 +330,31 @@ namespace IdleSentry
 
         public const double CountdownDelay = 1.25;
         private readonly Dictionary<string, DateTime> _recentlyQuitApps = new();
-        private Timer? _timer;
+        private DispatcherTimer? _timer;
         private int _currentInterval = 1000;
+        private bool _refreshInProgress;
+        private bool _refreshRequested;
+        private bool _disposed;
+        private int _stateVersion;
 
         public event Action<string, string>? RequestNotification;
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public AppState()
+        public AppState() : this(initialize: true) { }
+
+        internal AppState(bool initialize)
         {
-            LoadSettings();
-            ReEvaluateTimerState();
+            if (initialize)
+            {
+                LoadSettings();
+                ReEvaluateTimerState();
+            }
         }
 
         public void ReEvaluateTimerState()
         {
+            if (_disposed) return;
+            _stateVersion++;
             NotifyMonitoringStatus();
             bool anyMonitored = MonitoredApps.Any();
             if (IsMonitoring && anyMonitored)
@@ -350,7 +363,9 @@ namespace IdleSentry
                 {
                     Debug.WriteLine("IdleSentry: Monitored app list is active. Starting timer.");
                     _currentInterval = 1000;
-                    _timer = new Timer(Tick, null, 1000, 1000);
+                    _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+                    _timer.Tick += Tick;
+                    _timer.Start();
                 }
             }
             else
@@ -358,14 +373,14 @@ namespace IdleSentry
                 if (_timer != null)
                 {
                     Debug.WriteLine("IdleSentry: Stopping timer to conserve CPU.");
-                    _timer.Dispose();
+                    _timer.Stop();
+                    _timer.Tick -= Tick;
                     _timer = null;
                     SystemIdleTime = 0;
                     IsCountdownActive = false;
-                    _recentlyQuitApps.Clear();
                 }
             }
-            UpdateStates();
+            _ = RefreshStatesAsync();
         }
 
         private void NotifyMonitoringStatus()
@@ -377,24 +392,63 @@ namespace IdleSentry
             OnPropertyChanged(nameof(IsCloseImminent));
         }
 
-        private void Tick(object? state)
+        private async void Tick(object? sender, EventArgs e) => await RefreshStatesAsync();
+
+        // Capture settings and publish results on the dispatcher. Only one worker may
+        // scan/close processes at a time, even when closing takes longer than a tick.
+        internal async Task RefreshStatesAsync(double? idleSeconds = null)
         {
-            // Clean up recently quit cache (older than 5 seconds)
-            var now = DateTime.Now;
-            var staleKeys = _recentlyQuitApps.Where(kv => (now - kv.Value).TotalSeconds >= 5.0).Select(kv => kv.Key).ToList();
-            foreach (var key in staleKeys)
+            if (_disposed) return;
+            if (_refreshInProgress)
             {
-                _recentlyQuitApps.Remove(key);
+                _refreshRequested = true;
+                return;
             }
+            _refreshInProgress = true;
+            try
+            {
+                do
+                {
+                    _refreshRequested = false;
+                    int version = _stateVersion;
+                    double idle = IsMonitoring ? idleSeconds ?? GetIdleTime() : 0;
+                    double effectiveIdle = Math.Max(0, idle - CountdownDelay);
+                    bool monitoring = IsMonitoring;
+                    int quitMethod = QuitMethod;
+                    var apps = MonitoredApps.Select(app => new MonitoredApp
+                    {
+                        Name = app.Name, Path = app.Path, CustomTimeout = app.CustomTimeout ?? GlobalTimeout
+                    }).ToList();
+                    var result = await Task.Run(() => UpdateStatesAsync(apps, monitoring, quitMethod, effectiveIdle));
+                    if (_disposed) return;
+                    if (version != _stateVersion) continue;
 
-            double idleSecs = GetIdleTime();
-            SystemIdleTime = idleSecs;
+                    SystemIdleTime = idle;
+                    IsCountdownActive = monitoring && effectiveIdle > 0;
+                    ApplyStates(result.States);
+                    if (_timer != null)
+                    {
+                        _currentInterval = result.States.Any(app => app.IsRunning) ? 1000 : 3000;
+                        _timer.Interval = TimeSpan.FromMilliseconds(_currentInterval);
+                    }
+                    // Notifications cannot prevent the completed state from reaching the UI.
+                    foreach (string name in result.ClosedApps)
+                        SendNotification("App Closed Automatically", $"{name} was quit because it exceeded the idle timeout.");
+                } while (_refreshRequested && !_disposed);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"IdleSentry monitoring refresh failed: {ex}");
+            }
+            finally { _refreshInProgress = false; }
+        }
 
-            // Countdown is active once idle time exceeds the grace period
-            double effectiveIdle = Math.Max(0, idleSecs - CountdownDelay);
-            IsCountdownActive = effectiveIdle > 0;
-
-            UpdateStates(effectiveIdle);
+        public void Dispose()
+        {
+            _disposed = true;
+            _timer?.Stop();
+            if (_timer != null) _timer.Tick -= Tick;
+            _timer = null;
         }
 
         private static double GetIdleTime()
@@ -497,8 +551,13 @@ namespace IdleSentry
             }
         }
 
-        private void UpdateStates(double effectiveIdle = 0)
+        private async Task<(List<AppRunningState> States, List<string> ClosedApps)> UpdateStatesAsync(
+            List<MonitoredApp> appsList, bool monitoring, int quitMethod, double effectiveIdle)
         {
+            // This cache belongs exclusively to the serialized worker.
+            var now = DateTime.UtcNow;
+            foreach (var key in _recentlyQuitApps.Where(kv => (now - kv.Value).TotalSeconds >= 5).Select(kv => kv.Key).ToList())
+                _recentlyQuitApps.Remove(key);
             // Gather foreground process ID
             uint foregroundProcessId = 0;
             IntPtr foregroundWindow = GetForegroundWindow();
@@ -508,15 +567,12 @@ namespace IdleSentry
             }
 
             var updatedStates = new List<AppRunningState>();
-            bool anyAppRunning = false;
-
-            // Safe copy of MonitoredApps
-            var appsList = MonitoredApps.ToList();
+            var closedApps = new List<string>();
 
             foreach (var app in appsList)
             {
                 string path = app.Path;
-                double limit = app.CustomTimeout ?? GlobalTimeout;
+                double limit = app.CustomTimeout!.Value;
                 var icon = GetAppIcon(path);
 
                 // Handle recently quit apps to avoid zombie re-detection
@@ -563,7 +619,6 @@ namespace IdleSentry
                 }
 
                 bool isRunning = matchingProcesses.Count > 0;
-                if (isRunning) anyAppRunning = true;
 
                 bool isFrontmost = false;
                 if (isRunning && foregroundWindow != IntPtr.Zero)
@@ -577,26 +632,37 @@ namespace IdleSentry
                 double timeRemaining;
                 bool isCountingDown = false;
 
-                if (isRunning && IsMonitoring)
+                if (isRunning && monitoring)
                 {
                     timeRemaining = Math.Max(0, limit - effectiveIdle);
-                    isCountingDown = IsCountdownActive && timeRemaining < limit;
-
-                    if (timeRemaining <= 0)
-                    {
-                        QuitApp(matchingProcesses, app.Name, path);
-                        _recentlyQuitApps[path] = DateTime.Now;
-                    }
+                    isCountingDown = effectiveIdle > 0 && timeRemaining < limit;
                 }
                 else
                 {
                     timeRemaining = limit;
                 }
 
-                // Clean up remaining process handles
-                foreach (var p in matchingProcesses)
+                try
                 {
-                    p.Dispose();
+                    if (isRunning && monitoring && timeRemaining <= 0)
+                    {
+                        bool closed = await QuitAppAsync(matchingProcesses, app.Name, quitMethod);
+                        // Recheck the actual exit state rather than publishing the
+                        // pre-close snapshot with a stale 00:00/00:01 countdown.
+                        isRunning = matchingProcesses.Any(IsProcessRunning);
+                        isFrontmost &= isRunning;
+                        isCountingDown = isRunning;
+                        if (!isRunning)
+                        {
+                            _recentlyQuitApps[path] = DateTime.UtcNow;
+                            timeRemaining = limit;
+                            if (closed) closedApps.Add(app.Name);
+                        }
+                    }
+                }
+                finally
+                {
+                    foreach (var p in matchingProcesses) p.Dispose();
                 }
 
                 updatedStates.Add(new AppRunningState
@@ -612,67 +678,63 @@ namespace IdleSentry
                 });
             }
 
-            // Adaptive timer throttle: poll every 1s when apps run, slow down to 3s when idle to save CPU/battery
-            if (_timer != null)
-            {
-                int targetInterval = anyAppRunning ? 1000 : 3000;
-                if (_currentInterval != targetInterval)
-                {
-                    _currentInterval = targetInterval;
-                    _timer.Change(targetInterval, targetInterval);
-                }
-            }
+            return (updatedStates, closedApps);
+        }
 
-            // Sync with RunningStates collection on UI thread
-            System.Windows.Application.Current?.Dispatcher.BeginInvoke((Action)(() =>
+        private void ApplyStates(List<AppRunningState> updatedStates)
+        {
+            for (int i = 0; i < updatedStates.Count; i++)
             {
-                for (int i = 0; i < updatedStates.Count; i++)
+                var updated = updatedStates[i];
+                if (i < RunningStates.Count)
                 {
-                    var updated = updatedStates[i];
-                    if (i < RunningStates.Count)
+                    var current = RunningStates[i];
+                    if (current.Path != updated.Path)
                     {
-                        var current = RunningStates[i];
-                        if (current.Path != updated.Path)
-                        {
-                            RunningStates[i] = updated;
-                        }
-                        else
-                        {
-                            current.Name = updated.Name;
-                            current.Icon = updated.Icon;
-                            current.IsRunning = updated.IsRunning;
-                            current.IsFrontmost = updated.IsFrontmost;
-                            current.IsCountingDown = updated.IsCountingDown;
-                            current.TimeRemaining = updated.TimeRemaining;
-                        }
+                        RunningStates[i] = updated;
                     }
                     else
                     {
-                        RunningStates.Add(updated);
+                        current.Name = updated.Name;
+                        current.Icon = updated.Icon;
+                        current.IsRunning = updated.IsRunning;
+                        current.IsFrontmost = updated.IsFrontmost;
+                        current.IsCountingDown = updated.IsCountingDown;
+                        current.TimeRemaining = updated.TimeRemaining;
                     }
                 }
-
-                while (RunningStates.Count > updatedStates.Count)
+                else
                 {
-                    RunningStates.RemoveAt(RunningStates.Count - 1);
+                    RunningStates.Add(updated);
                 }
+            }
 
-                // Notify changes for computed properties
-                OnPropertyChanged(nameof(AppsPendingClose));
-                OnPropertyChanged(nameof(CountdownValue));
-                OnPropertyChanged(nameof(HasAppsPendingClose));
-                OnPropertyChanged(nameof(RunningAppsCount));
-                OnPropertyChanged(nameof(ActivityStatusText));
-                OnPropertyChanged(nameof(IsCloseImminent));
-            }));
+            while (RunningStates.Count > updatedStates.Count)
+            {
+                RunningStates.RemoveAt(RunningStates.Count - 1);
+            }
+
+            // Notify changes for computed properties
+            OnPropertyChanged(nameof(AppsPendingClose));
+            OnPropertyChanged(nameof(CountdownValue));
+            OnPropertyChanged(nameof(HasAppsPendingClose));
+            OnPropertyChanged(nameof(RunningAppsCount));
+            OnPropertyChanged(nameof(ActivityStatusText));
+            OnPropertyChanged(nameof(IsCloseImminent));
         }
 
-        private void QuitApp(List<Process> processes, string name, string path)
+        private static bool IsProcessRunning(Process process)
+        {
+            try { return !process.HasExited; }
+            catch (InvalidOperationException) { return false; }
+        }
+
+        private static async Task<bool> QuitAppAsync(List<Process> processes, string name, int quitMethod)
         {
             Debug.WriteLine($"IdleSentry: Quitting idle app {name} ({processes.Count} instances)");
             bool anyClosed = false;
 
-            if (QuitMethod == 1) // Force Quit
+            if (quitMethod == 1) // Force Quit
             {
                 foreach (var p in processes)
                 {
@@ -683,7 +745,7 @@ namespace IdleSentry
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"Force quit failed for PID {p.Id}: {ex.Message}");
+                        Debug.WriteLine($"Force quit failed: {ex.Message}");
                     }
                 }
             }
@@ -703,22 +765,9 @@ namespace IdleSentry
                     catch { }
                 }
 
-                // 2. Wait up to 2.5 seconds for processes to exit gracefully
-                bool allExited = true;
-                foreach (var p in processes)
-                {
-                    try
-                    {
-                        if (!p.WaitForExit(2500))
-                        {
-                            allExited = false;
-                        }
-                    }
-                    catch
-                    {
-                        // Process already terminated
-                    }
-                }
+                // Share one grace period across every browser/helper process.
+                await WaitForProcessesAsync(processes, TimeSpan.FromMilliseconds(2500));
+                bool allExited = !processes.Any(IsProcessRunning);
 
                 // 3. Fallback for tray-minimizing apps (Discord, Telegram, Spotify, etc.)
                 // If processes did not exit after grace period, terminate to guarantee privacy
@@ -743,10 +792,22 @@ namespace IdleSentry
                 }
             }
 
-            if (anyClosed)
+            // Kill requests are asynchronous; allow exit handles to signal before
+            // publishing the result, using a single deadline for the whole app.
+            await WaitForProcessesAsync(processes, TimeSpan.FromSeconds(1));
+            return anyClosed && !processes.Any(IsProcessRunning);
+        }
+
+        private static async Task WaitForProcessesAsync(List<Process> processes, TimeSpan timeout)
+        {
+            using var deadline = new CancellationTokenSource(timeout);
+            await Task.WhenAll(processes.Select(async process =>
             {
-                SendNotification("App Closed Automatically", $"{name} was quit because it exceeded the idle timeout.");
-            }
+                try { await process.WaitForExitAsync(deadline.Token); }
+                catch (OperationCanceledException) { }
+                catch (InvalidOperationException) { }
+                catch (System.ComponentModel.Win32Exception) { }
+            }));
         }
 
         public void AddApp(string path, string? displayName = null)
@@ -788,7 +849,11 @@ namespace IdleSentry
 
         private void SendNotification(string title, string body)
         {
-            RequestNotification?.Invoke(title, body);
+            try { RequestNotification?.Invoke(title, body); }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Close notification failed: {ex}");
+            }
         }
 
         private void ToggleLaunchAtStartup(bool enable)

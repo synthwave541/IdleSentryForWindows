@@ -1,5 +1,22 @@
 # Release history
 
+## 1.0.13 — 2026-10-20
+
+- Show the number of currently running monitored apps in a red circular sidebar
+  badge, and hide the badge completely when none are running.
+- Keep the badge compact with a true 16-pixel circle and centered white count.
+
+- Fix the crash after closing a monitored app when its notification was sent
+  before the programmatically constructed tray icon had been registered.
+- Explicitly create and retain the tray icon for windowed and background starts,
+  retry registration when Explorer is unavailable, and isolate notification failures.
+- Serialize process scans, publish completed app states on the UI thread, and
+  recheck process exit before clearing a countdown.
+- Use one grace period for all processes belonging to an app, instead of waiting
+  separately for each browser helper process.
+- Stop monitoring and release the tray icon on explicit exit.
+- Accept SDK commit metadata when validating executable versions for installers.
+
 ## 1.0.10 — 2026-10-20
 
 Initial Windows release of IdleSentry, based on the macOS implementation.

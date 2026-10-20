@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using H.NotifyIcon;
 using H.NotifyIcon.Core;
 
@@ -19,6 +20,7 @@ namespace IdleSentry
         private const string PipeName = "IdleSentry_Pipe_Unique_ID_192837";
         private CancellationTokenSource? _pipeCts;
         private WindowsAccentWatcher? _accentWatcher;
+        private DispatcherTimer? _trayRetryTimer;
         public AppState AppState { get; private set; } = null!;
         public TaskbarIcon? TrayIcon { get; private set; }
         public bool IsShuttingDown { get; private set; }
@@ -38,6 +40,7 @@ namespace IdleSentry
             }
 
             base.OnStartup(e);
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
             _accentWatcher = new WindowsAccentWatcher(Dispatcher);
 
             // 2. Initialize State
@@ -133,6 +136,7 @@ namespace IdleSentry
             {
                 ToolTipText = "IdleSentry",
                 MenuActivation = PopupActivationMode.RightClick,
+                Visibility = Visibility.Visible,
             };
 
             // Set dynamic icon based on state
@@ -154,6 +158,29 @@ namespace IdleSentry
             var menu = new ContextMenu();
             menu.Opened += ContextMenu_Opened;
             TrayIcon.ContextMenu = menu;
+
+            // A programmatically created icon never receives FrameworkElement.Loaded.
+            // Register it explicitly, including when no main window is ever opened.
+            EnsureTrayIconCreated();
+            _trayRetryTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
+            _trayRetryTimer.Tick += (_, _) => EnsureTrayIconCreated();
+            _trayRetryTimer.Start();
+        }
+
+        internal bool EnsureTrayIconCreated()
+        {
+            if (IsShuttingDown || TrayIcon == null) return false;
+            try
+            {
+                TrayIcon.Visibility = Visibility.Visible;
+                if (!TrayIcon.IsCreated) TrayIcon.ForceCreate(enablesEfficiencyMode: false);
+                return TrayIcon.IsCreated;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Tray registration failed; will retry: {ex.Message}");
+                return false;
+            }
         }
 
         private void UpdateTrayIcon(bool isMonitoring)
@@ -264,13 +291,29 @@ namespace IdleSentry
 
         private void OnNotificationRequested(string title, string body)
         {
-            // Trigger a native system balloon tip notification via TaskbarIcon
-            TrayIcon?.ShowNotification(title, body, NotificationIcon.Info);
+            if (IsShuttingDown || Dispatcher.HasShutdownStarted) return;
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke((Action)(() => OnNotificationRequested(title, body)));
+                return;
+            }
+            try
+            {
+                if (EnsureTrayIconCreated()) TrayIcon!.ShowNotification(title, body, NotificationIcon.Info);
+            }
+            catch (Exception ex)
+            {
+                // Explorer or notifications may be unavailable. Closing an app must
+                // still finish and monitoring must continue without a notification.
+                Debug.WriteLine($"Tray notification unavailable: {ex.Message}");
+            }
         }
 
         public void SafeShutdown()
         {
             IsShuttingDown = true;
+            AppState?.Dispose();
+            _trayRetryTimer?.Stop();
             _pipeCts?.Cancel();
             TrayIcon?.Dispose();
             MainWindow?.Close();
@@ -279,6 +322,10 @@ namespace IdleSentry
 
         protected override void OnExit(ExitEventArgs e)
         {
+            IsShuttingDown = true;
+            AppState?.Dispose();
+            _trayRetryTimer?.Stop();
+            TrayIcon?.Dispose();
             _accentWatcher?.Dispose();
             _pipeCts?.Cancel();
             _pipeCts?.Dispose();
@@ -313,7 +360,7 @@ namespace IdleSentry
                 var borderColor = System.Drawing.Color.White;
 
                 // Draw Shield geometry
-                var path = new System.Drawing.Drawing2D.GraphicsPath();
+                using var path = new System.Drawing.Drawing2D.GraphicsPath();
                 path.AddBezier(new System.Drawing.Point(4, 6), new System.Drawing.Point(16, 2), new System.Drawing.Point(16, 2), new System.Drawing.Point(28, 6));
                 path.AddBezier(new System.Drawing.Point(28, 6), new System.Drawing.Point(28, 18), new System.Drawing.Point(24, 26), new System.Drawing.Point(16, 30));
                 path.AddBezier(new System.Drawing.Point(16, 30), new System.Drawing.Point(8, 26), new System.Drawing.Point(4, 18), new System.Drawing.Point(4, 6));

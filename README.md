@@ -43,6 +43,9 @@ Intel/AMD x64 and Windows on ARM.
 - **Match your desktop.** Fluent styling, your Windows accent color, and selection motion that respects the Windows animation preference.
 - **Keep settings local.** No accounts, telemetry, or cloud service. Preferences are stored on your PC.
 
+If Windows places IdleSentry in the hidden-icons menu, drag its icon beside the
+clock or enable it in Windows Taskbar settings to keep it visible there.
+
 **Closing an app can lose unsaved work with either quit strategy.** Standard Quit
 does not guarantee that an app saves its data. IdleSentry complements your screen
 lock; it does not lock Windows or hide applications that you have not selected.

@@ -31,7 +31,10 @@ New-Item -ItemType Directory -Path $distDir -Force | Out-Null
 foreach ($target in $targets) {
     $executable = Join-Path $projectDir "publish\win-$target\IdleSentry.exe"
     if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) { throw "Missing published executable: $executable" }
-    if ((Get-Item -LiteralPath $executable).VersionInfo.ProductVersion -ne $version) {
+    # The SDK appends +<commit> to informational versions inside a Git checkout.
+    # Compare the release portion, as AppInfo does for the displayed version.
+    $publishedVersion = (Get-Item -LiteralPath $executable).VersionInfo.ProductVersion.Split('+')[0]
+    if ($publishedVersion -ne $version) {
         throw "Published $target version does not match $version. Run build.ps1 first."
     }
     & $CompilerPath "/DAppVersion=$version" "/DTargetArch=$target" "/O$distDir" (Join-Path $projectDir 'installer\IdleSentry.iss')
