@@ -1,0 +1,29 @@
+# Local macOS checkout kept beside this Windows repository.
+/IdleSentry/
+
+# Build and release output.
+**/bin/
+**/obj/
+**/publish/
+**/dist/
+TestResults/
+
+# Local editor, OS and diagnostic files.
+.vs/
+.idea/
+*.code-workspace
+*.user
+*.suo
+*.pdb
+*.log
+.DS_Store
+Thumbs.db
+
+# Local settings and signing material.
+settings.json
+.env
+.env.*
+*.pfx
+*.p12
+*.key
+*.pem

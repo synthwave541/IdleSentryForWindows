@@ -1,0 +1,47 @@
+name: Windows build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Verify and publish x64 and ARM64
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 8.0.x
+      - name: Run discovery and presentation checks
+        shell: pwsh
+        run: dotnet run --project './IdleSentry.ChooserTests/IdleSentry.ChooserTests.csproj' -c Release
+      - name: Build both architectures
+        shell: pwsh
+        run: "& './IdleSentry for Windows/build.ps1' -Arch all"
+      - name: Upload x64 build
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: IdleSentry-win-x64
+          path: |
+            IdleSentry for Windows/publish/win-x64/IdleSentry.exe
+            IdleSentry for Windows/LICENSE
+            IdleSentry for Windows/THIRD-PARTY-NOTICES.txt
+          if-no-files-found: error
+      - name: Upload ARM64 build
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: IdleSentry-win-arm64
+          path: |
+            IdleSentry for Windows/publish/win-arm64/IdleSentry.exe
+            IdleSentry for Windows/LICENSE
+            IdleSentry for Windows/THIRD-PARTY-NOTICES.txt
+          if-no-files-found: error

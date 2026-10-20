@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+**/publish/
+**/dist/
+.vs/
+.idea/
+*.user
+*.suo
+*.pdb
+.DS_Store
+Thumbs.db
+*.log
+*.pfx
+*.p12
