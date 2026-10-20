@@ -1,5 +1,13 @@
 # Release history
 
+## 1.0.14 — 2026-10-21
+
+- Open a scrollable closing queue from the sidebar countdown, ordered by next deadline.
+- Keep the list available when keyboard or mouse input resets inactivity.
+- Truncate long names in the compact card, with a full-name tooltip and a separate additional-app count.
+- Preserve scroll position across timer updates and hide the queue when monitoring pauses or no monitored apps remain running.
+- Match the macOS source version at 1.0.14. Release downloads are published separately from source pushes.
+
 ## 1.0.13 — 2026-10-20
 
 - Show the number of currently running monitored apps in a red circular sidebar

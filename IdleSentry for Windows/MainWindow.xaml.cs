@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Input;
 using System.Windows.Media.Animation;
 using Wpf.Ui.Controls;
 using Button = System.Windows.Controls.Button;
@@ -23,6 +24,12 @@ namespace IdleSentry
             SidebarNavigation.ApplyTemplate();
             SidebarNavigation.Navigate("0");
             Loaded += (_, _) => UpdateSelectionIndicator(animate: false);
+            _appState.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(AppState.HasClosingQueue) && !_appState.HasClosingQueue)
+                    ClosingQueuePopup.IsOpen = false;
+            };
+            IsVisibleChanged += (_, _) => { if (!IsVisible) ClosingQueuePopup.IsOpen = false; };
         }
 
         private void SidebarNavigation_SelectionChanged(NavigationView sender, RoutedEventArgs e)
@@ -72,6 +79,21 @@ namespace IdleSentry
                 page.SetBinding(DataContextProperty, new System.Windows.Data.Binding(nameof(DataContext)) { Source = window });
                 return page;
             }
+        }
+
+        private void ActivityQueue_Click(object sender, RoutedEventArgs e)
+        {
+            if (_appState.HasClosingQueue) ClosingQueuePopup.IsOpen = true;
+        }
+
+        private void ClosingQueuePopup_Opened(object sender, EventArgs e) => ClosingQueueScroll.Focus();
+
+        private void ClosingQueue_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Escape) return;
+            ClosingQueuePopup.IsOpen = false;
+            ActivityQueueButton.Focus();
+            e.Handled = true;
         }
 
         // Choose apps by name; manual executable browsing lives inside the picker.

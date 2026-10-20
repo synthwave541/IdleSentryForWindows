@@ -479,15 +479,60 @@
                     </Style>
                 </Border.Style>
                 <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <ui:SymbolIcon Symbol="Timer24" FontSize="17" Foreground="#FBBF24" Margin="0,0,10,0" VerticalAlignment="Center" />
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock x:Name="ActivityCountdown" FontFamily="Consolas" FontSize="22" FontWeight="SemiBold" Foreground="#FBBF24" Text="{Binding CountdownValue, Converter={StaticResource SecondsToTimerConverter}}" Visibility="{Binding HasAppsPendingClose, Converter={StaticResource BooleanToVisibilityConverter}}" AutomationProperties.Name="Time until the next app closes" />
-                        <TextBlock Text="{Binding ActivityStatusText}" FontSize="10.5" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="32" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                    </StackPanel>
+                    <Button x:Name="ActivityQueueButton" Click="ActivityQueue_Click" IsEnabled="{Binding HasClosingQueue}"
+                            Background="Transparent" BorderThickness="0" Padding="0" HorizontalContentAlignment="Stretch"
+                            AutomationProperties.Name="{Binding ClosingQueueHint}" ToolTip="{Binding ClosingQueueHint}">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <ui:SymbolIcon Symbol="Timer24" FontSize="17" Foreground="#FBBF24" Margin="0,0,10,0" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock x:Name="ActivityCountdown" FontFamily="Consolas" FontSize="22" FontWeight="SemiBold" Foreground="#FBBF24" Text="{Binding CountdownValue, Converter={StaticResource SecondsToTimerConverter}}" Visibility="{Binding HasAppsPendingClose, Converter={StaticResource BooleanToVisibilityConverter}}" AutomationProperties.Name="Time until the next app closes" />
+                                <StackPanel Visibility="{Binding HasAppsPendingClose, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DockPanel Margin="0,3,0,2">
+                                        <TextBlock Text="›" DockPanel.Dock="Right" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Text="Next to close" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    </DockPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="NextClosingApp" Text="{Binding NextClosingAppName}" ToolTip="{Binding NextClosingAppName}"
+                                                   FontSize="10.5" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding ClosingQueueAdditionalText}" FontSize="10" Margin="6,0,0,0"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" Visibility="{Binding ClosingQueueAdditionalCount, Converter={StaticResource IntToVisibilityConverter}}" />
+                                    </Grid>
+                                </StackPanel>
+                                <TextBlock Text="{Binding ActivityStatusText}" FontSize="10.5" TextWrapping="Wrap" MaxHeight="32"
+                                           Visibility="{Binding HasAppsPendingClose, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </Grid>
+                    </Button>
+                    <Popup x:Name="ClosingQueuePopup" Placement="Right" PlacementTarget="{Binding ElementName=ActivityBar}"
+                           StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Opened="ClosingQueuePopup_Opened"
+                           DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <Border Width="352" Padding="16" Margin="8" CornerRadius="10" BorderThickness="1"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                PreviewKeyDown="ClosingQueue_PreviewKeyDown" AutomationProperties.Name="Closing queue">
+                            <StackPanel>
+                                <TextBlock Text="Closing queue" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                <TextBlock Text="{Binding ClosingQueueDescription}" Margin="0,4,0,14" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <ScrollViewer x:Name="ClosingQueueScroll" MaxHeight="320" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="True" AutomationProperties.Name="Closing queue applications">
+                                    <ItemsControl x:Name="ClosingQueueItems" ItemsSource="{Binding ClosingQueue}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid MinHeight="52" Margin="0,0,4,0">
+                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                    <Image Source="{Binding Icon}" Width="28" Height="28" Margin="0,0,10,0" Stretch="Uniform" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Name}" ToolTip="{Binding Name}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding TimeRemaining, Converter={StaticResource SecondsToTimerConverter}}" FontFamily="Consolas" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                                <TextBlock Text="Keyboard or mouse activity resets these timers." TextWrapping="Wrap" FontSize="10.5" Margin="0,14,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </Border>
+                    </Popup>
                 </Grid>
             </Border>
         </ui:NavigationView.PaneFooter>

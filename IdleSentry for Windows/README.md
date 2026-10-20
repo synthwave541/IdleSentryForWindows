@@ -98,3 +98,9 @@ and `dist/` are ignored. See [PUBLISHING.md](PUBLISHING.md) for the release proc
 
 Code is distributed under [Apache-2.0](LICENSE). Redistribution must also include
 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt) for bundled dependencies.
+
+## Closing queue (source version 1.0.14)
+
+Click the sidebar countdown/status card to inspect running monitored apps in a scrollable queue, ordered by the next deadline. Long names truncate in the compact card and show in full on hover; an additional-app count avoids listing every name in the sidebar. The queue stays open, retaining its scroll position when activity resets the timer, and closes when monitoring pauses or no monitored apps remain running. Escape or clicking outside dismisses it.
+
+Source version 1.0.14 matches the macOS app. Download assets on the latest published release may have an earlier version until the next release is published.

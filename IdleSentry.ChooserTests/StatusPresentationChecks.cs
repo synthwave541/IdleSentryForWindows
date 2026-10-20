@@ -6,6 +6,8 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Threading;
 using System.Windows.Automation.Peers;
 using System.Windows.Automation.Provider;
 using System.Windows.Media;
@@ -68,6 +70,8 @@ internal static class StatusPresentationChecks
         state.MonitoredApps.Clear();
         check(state.ActivityStatusText == "Add an app to get started" && state.MonitoredAppsSummary == "0 apps", "empty state has no phantom countdown");
         check(Snapshot().MonitoredAppsSummary == "1 app", "singular monitored-app label");
+
+        VerifyClosingQueue(check);
 
         // Render the actual view using snapshots; no desktop interaction or live app settings.
         var application = new SnapshotApplication { ShutdownMode = ShutdownMode.OnExplicitShutdown };
@@ -189,6 +193,7 @@ internal static class StatusPresentationChecks
             if (page == 0) SavePreview(root, previewDirectory, "dashboard-countdown.png", 960, 680);
             if (page == 2) SavePreview(root, previewDirectory, "rules-countdown.png", 960, 680);
         }
+        VerifyQueuePopup(check, previewDirectory);
         var urgent = Snapshot();
         urgent.RunningStates[0].TimeRemaining = 5;
         window.DataContext = urgent;
@@ -206,6 +211,84 @@ internal static class StatusPresentationChecks
         window.Content = null;
         MonitoringLifecycleChecks.Run(application, check);
         application.Shutdown();
+    }
+
+    private static void VerifyClosingQueue(Action<bool, string> check)
+    {
+        var state = Snapshot();
+        for (int index = 1; index < 30; index++)
+            state.RunningStates.Add(new AppRunningState
+            {
+                Name = $"Sample Application {index + 1}", Path = $@"C:\Preview\sample{index}.exe",
+                IsRunning = true, TimeRemaining = 50 + index
+            });
+        var view = state.ClosingQueue;
+        check(state.HasClosingQueue && state.ClosingQueueCount == 30 && view.Cast<AppRunningState>().Count() == 30,
+            "closing queue includes all running monitored apps without a display cap");
+        check(state.ClosingQueueAdditionalText == "+29 more", "compact queue reports all additional apps");
+        state.RunningStates[10].TimeRemaining = 2;
+        Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Background);
+        check(ReferenceEquals(view.Cast<AppRunningState>().First(), state.RunningStates[10]),
+            "closing queue reorders live when an app deadline changes");
+        SetField(state, "_isCountdownActive", false);
+        check(state.HasClosingQueue && ReferenceEquals(view, state.ClosingQueue),
+            "input reset retains the same queue view for inspection and scroll stability");
+        state.RunningStates[10].IsRunning = false;
+        Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Background);
+        check(view.Cast<AppRunningState>().Count() == 29 && state.RunningStates.Count == 30,
+            "live queue filtering removes stopped apps without filtering the main collection");
+        SetField(state, "_isMonitoring", false);
+        check(!state.HasClosingQueue && state.ClosingQueueCount == 0, "pausing makes the closing queue unavailable");
+    }
+
+    private static void VerifyQueuePopup(Action<bool, string> check, string? previewDirectory)
+    {
+        var state = Snapshot();
+        var window = new MainWindow(state);
+        var applyStates = typeof(AppState).GetMethod("ApplyStates", BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var samples = Enumerable.Range(0, 30).Select(index => new AppRunningState
+        {
+            Name = index == 0 ? "Example Browser — Research, Reading and Work Profiles" : $"Sample Application {index + 1}",
+            Path = $@"C:\Preview\queue{index}.exe", IsRunning = true,
+            IsCountingDown = true, TimeRemaining = 20 + index
+        }).ToList();
+        applyStates.Invoke(state, new object[] { samples });
+        window.Show();
+        var root = (FrameworkElement)window.Content;
+        Layout(root, 960, 680);
+        var button = (Button)window.FindName("ActivityQueueButton");
+        var popup = (Popup)window.FindName("ClosingQueuePopup");
+        var scroll = (ScrollViewer)window.FindName("ClosingQueueScroll");
+        var items = (ItemsControl)window.FindName("ClosingQueueItems");
+        var next = (TextBlock)window.FindName("NextClosingApp");
+        check(next.TextTrimming == TextTrimming.CharacterEllipsis && next.TextWrapping == TextWrapping.NoWrap
+            && next.ToolTip?.ToString() == samples[0].Name, "long names stay on one line with the full name on hover");
+        check(button.IsEnabled && popup.Placement == PlacementMode.Right && !popup.StaysOpen && scroll.MaxHeight == 320,
+            "closing queue has a bounded native popup with outside-click dismissal");
+        button.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Background);
+        popup.Child.UpdateLayout();
+        check(popup.IsOpen && items.Items.Count == 30, "clicking the sidebar opens the complete queue");
+        scroll.ScrollToEnd();
+        Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Background);
+        check(scroll.VerticalOffset > 0, "large closing queues scroll to the last apps");
+        double offset = scroll.VerticalOffset;
+        SetField(state, "_isCountdownActive", false);
+        applyStates.Invoke(state, new object[] { samples.Select(app => new AppRunningState
+        {
+            Name = app.Name, Path = app.Path, IsRunning = true, TimeRemaining = 60
+        }).ToList() });
+        Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Background);
+        check(popup.IsOpen && scroll.VerticalOffset >= offset - 1,
+            "input reset keeps the popup open and preserves its scroll position");
+        SavePreview((FrameworkElement)popup.Child, previewDirectory, "closing-queue-many-apps.png",
+            (int)Math.Ceiling(((FrameworkElement)popup.Child).ActualWidth), (int)Math.Ceiling(((FrameworkElement)popup.Child).ActualHeight));
+        SetField(state, "_isMonitoring", false);
+        applyStates.Invoke(state, new object[] { samples });
+        Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Background);
+        check(!popup.IsOpen && !button.IsEnabled, "pausing closes and disables the active queue");
+        window.Content = null;
+        window.Hide();
     }
 
     private static void Layout(FrameworkElement root, int width, int height)

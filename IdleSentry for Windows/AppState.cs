@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
@@ -173,6 +174,8 @@ namespace IdleSentry
         private bool _isCountdownActive;
         private bool _launchAtStartup;
         private ObservableCollection<AppRunningState> _runningStates = new();
+        private ListCollectionView? _closingQueueView;
+        private ObservableCollection<AppRunningState>? _closingQueueSource;
 
         public ObservableCollection<MonitoredApp> MonitoredApps
         {
@@ -278,7 +281,7 @@ namespace IdleSentry
         public ObservableCollection<AppRunningState> RunningStates
         {
             get => _runningStates;
-            set { _runningStates = value; OnPropertyChanged(); }
+            set { _runningStates = value; OnPropertyChanged(); OnPropertyChanged(nameof(ClosingQueue)); }
         }
 
         // Computed properties
@@ -291,6 +294,48 @@ namespace IdleSentry
                     .Where(s => s.IsRunning && s.TimeRemaining < GetAppTimeout(s.Path))
                     .OrderBy(s => s.TimeRemaining);
             }
+        }
+
+        // An independent live view keeps stopped apps in the main list and preserves
+        // the popup's scroll position when input resets or a timer ticks.
+        public ICollectionView ClosingQueue
+        {
+            get
+            {
+                if (_closingQueueView == null || !ReferenceEquals(_closingQueueSource, RunningStates))
+                {
+                    _closingQueueSource = RunningStates;
+                    _closingQueueView = new ListCollectionView(RunningStates)
+                    {
+                        Filter = item => item is AppRunningState { IsRunning: true }
+                    };
+                    _closingQueueView.SortDescriptions.Add(new SortDescription(nameof(AppRunningState.TimeRemaining), ListSortDirection.Ascending));
+                    _closingQueueView.LiveSortingProperties.Add(nameof(AppRunningState.TimeRemaining));
+                    _closingQueueView.IsLiveSorting = true;
+                    _closingQueueView.LiveFilteringProperties.Add(nameof(AppRunningState.IsRunning));
+                    _closingQueueView.IsLiveFiltering = true;
+                }
+                return _closingQueueView;
+            }
+        }
+
+        public bool HasClosingQueue => IsMonitoring && RunningAppsCount > 0;
+        public int ClosingQueueCount => IsMonitoring ? RunningAppsCount : 0;
+        public int ClosingQueueAdditionalCount => Math.Max(0, ClosingQueueCount - 1);
+        public string ClosingQueueAdditionalText => $"+{ClosingQueueAdditionalCount} more";
+        public string ClosingQueueDescription => $"{ClosingQueueCount} monitored {(ClosingQueueCount == 1 ? "app" : "apps")} · soonest first";
+        public string NextClosingAppName => AppsPendingClose.FirstOrDefault()?.Name ?? string.Empty;
+        public string ClosingQueueHint => $"View closing queue · {ClosingQueueCount} monitored {(ClosingQueueCount == 1 ? "app" : "apps")}";
+
+        private void NotifyClosingQueueProperties()
+        {
+            OnPropertyChanged(nameof(HasClosingQueue));
+            OnPropertyChanged(nameof(ClosingQueueCount));
+            OnPropertyChanged(nameof(ClosingQueueAdditionalCount));
+            OnPropertyChanged(nameof(ClosingQueueAdditionalText));
+            OnPropertyChanged(nameof(ClosingQueueDescription));
+            OnPropertyChanged(nameof(NextClosingAppName));
+            OnPropertyChanged(nameof(ClosingQueueHint));
         }
 
         public bool HasAppsPendingClose => AppsPendingClose.Any();
@@ -389,6 +434,7 @@ namespace IdleSentry
             OnPropertyChanged(nameof(MonitoringDescription));
             OnPropertyChanged(nameof(MonitoredAppsSummary));
             OnPropertyChanged(nameof(ActivityStatusText));
+            NotifyClosingQueueProperties();
             OnPropertyChanged(nameof(IsCloseImminent));
         }
 
@@ -720,6 +766,7 @@ namespace IdleSentry
             OnPropertyChanged(nameof(HasAppsPendingClose));
             OnPropertyChanged(nameof(RunningAppsCount));
             OnPropertyChanged(nameof(ActivityStatusText));
+            NotifyClosingQueueProperties();
             OnPropertyChanged(nameof(IsCloseImminent));
         }
 

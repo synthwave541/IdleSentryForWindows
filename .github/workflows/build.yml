@@ -23,7 +23,14 @@ jobs:
           dotnet-version: 8.0.x
       - name: Run discovery and presentation checks
         shell: pwsh
-        run: dotnet run --project './IdleSentry.ChooserTests/IdleSentry.ChooserTests.csproj' -c Release
+        run: dotnet run --project './IdleSentry.ChooserTests/IdleSentry.ChooserTests.csproj' -c Release -- --preview-dir ./test-previews
+      - name: Upload UI previews
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: IdleSentry-Windows-UI-previews
+          path: test-previews/*.png
+          if-no-files-found: ignore
       - name: Build both architectures
         shell: pwsh
         run: "& './IdleSentry for Windows/build.ps1' -Arch all"
