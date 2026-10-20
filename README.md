@@ -1,4 +1,5 @@
 <p align="center">
+  <a href="https://github.com/synthwave541/IdleSentryForWindows/releases/latest"><img src="https://img.shields.io/github/v/release/synthwave541/IdleSentryForWindows?label=release" alt="Latest release"></a>
   <img src="IdleSentry%20for%20Windows/IdleSentry.png" width="72" alt="IdleSentry shield and clock logo">
 </p>
 
@@ -14,7 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/synthwave541/IdleSentryForWindows/releases">Downloads</a> ·
+  <a href="https://github.com/synthwave541/IdleSentryForWindows/releases/latest">Download latest</a> ·
   <a href="https://github.com/synthwave541/IdleSentry">macOS version</a> ·
   <a href="https://zennoris.com">Website</a> ·
   <a href="https://github.com/synthwave541/IdleSentryForWindows/issues">Report an issue</a>
@@ -25,8 +26,8 @@ period of keyboard and mouse inactivity. Choose your apps, set a timeout, and
 leave IdleSentry running in the background.
 
 This repository contains the C#/WPF Windows counterpart of
-[IdleSentry for macOS](https://github.com/synthwave541/IdleSentry). The first Windows
-release is a **preview**.
+[IdleSentry for macOS](https://github.com/synthwave541/IdleSentry), with builds for
+Intel/AMD x64 and Windows on ARM.
 
 ![IdleSentry dashboard with a monitored example app and a single sidebar countdown](docs/images/dashboard.png)
 
@@ -48,7 +49,7 @@ lock; it does not lock Windows or hide applications that you have not selected.
 
 ## Download and install
 
-Open [Releases](https://github.com/synthwave541/IdleSentryForWindows/releases) and
+Open the [latest release](https://github.com/synthwave541/IdleSentryForWindows/releases/latest) and
 choose the package for your PC:
 
 | Package | Use it on |
@@ -65,7 +66,7 @@ an uninstaller. A desktop shortcut is optional. Portable packages can be extract
 to a folder and launched with `IdleSentry.exe`. Neither package requires a
 separate .NET installation.
 
-Preview binaries are unsigned and may display Windows publisher or reputation
+The current binaries are unsigned and may display Windows publisher or reputation
 warnings. Download only from this repository's releases. Each release includes
 `SHA256SUMS.txt` for file-integrity checks.
 
@@ -137,6 +138,7 @@ Generated binaries and local files are ignored by Git. The tests are development
 tools and are not included in installed or portable app packages.
 
 See [developer notes](IdleSentry%20for%20Windows/README.md),
+[release history](CHANGELOG.md),
 [publishing instructions](IdleSentry%20for%20Windows/PUBLISHING.md), and
 [contribution guidelines](CONTRIBUTING.md) for more details.
 

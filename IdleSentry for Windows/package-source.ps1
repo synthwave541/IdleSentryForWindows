@@ -16,7 +16,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectDir 'installer') -Destination $sourceProject -Recurse
     Get-ChildItem -LiteralPath $testsDir -File | Where-Object { $_.Extension -in '.cs', '.csproj' } | Copy-Item -Destination $sourceTests
     $repositoryDir = Split-Path -Parent $projectDir
-    foreach ($name in @('README.md', 'LICENSE', '.gitignore', '.gitattributes', 'CONTRIBUTING.md')) {
+    foreach ($name in @('README.md', 'LICENSE', '.gitignore', '.gitattributes', 'CONTRIBUTING.md', 'CHANGELOG.md')) {
         Copy-Item -LiteralPath (Join-Path $repositoryDir $name) -Destination $stageDir
     }
     foreach ($directory in @('docs', '.github')) {

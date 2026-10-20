@@ -29,8 +29,10 @@ Run commands below from this project's directory:
    `./build-installer.ps1 -Arch all`. This builds x64 and ARM64 executables,
    compiles installers, creates portable ZIPs, and generates `SHA256SUMS.txt`.
 5. Verify the packages, commit the reviewed source, and create a GitHub release
-   targeting that commit. Use a prerelease tag such as
-   `v1.0.10-windows-preview.1` until manual platform validation is complete.
+   targeting that commit. Use `v<version>` for a regular release and mark it
+   **Latest** so GitHub displays the version in the repository's Releases panel.
+   Use a `-preview.n` suffix and the prerelease flag only for preview releases;
+   GitHub does not allow prereleases to be marked Latest.
 
 Run the source-packaging step before the installer step so the source ZIP is
 included in the checksum file. The source ZIP and GitHub's automatically
