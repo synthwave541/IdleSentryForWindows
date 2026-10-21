@@ -1,3 +1,9 @@
+## 1.0.16 — 2026-10-21
+
+- Publish a higher standalone version so existing 1.0.15 installations can receive the refreshed countdown, closing queue and hover/focus fixes through the GitHub updater.
+- Add a separate Microsoft Store distribution channel with package-owned settings, Windows startup-task integration and Store-managed updates. Standalone builds keep their GitHub updater and existing settings location.
+- Include transparent target-size shell assets and a PRI index in Store bundles to avoid the colored taskbar icon plate.
+
 ## 1.0.15
 
 - Added optional daily GitHub update checks, download progress and user-approved install/restart.

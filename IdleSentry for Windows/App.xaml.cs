@@ -49,17 +49,23 @@ namespace IdleSentry
 
             // 3. Setup System Tray Icon
             SetupTrayIcon();
+#if !STORE
             UpdateService.Shared.UpdateFound += version => OnNotificationRequested("IdleSentry update available",
                 $"Version {version} is ready to download. Open About to update when you’re ready.");
             _ = UpdateService.Shared.StartAsync();
             // Refresh any 1.0.14 startup path after the first launch of the new installer.
             if (AppState.LaunchAtStartup) AppState.RefreshStartupPath();
+#endif
+            _ = AppState.RefreshStartupStateAsync();
 
             // 4. Start listening for subsequent launches (so they can wake this instance)
             StartPipeServer();
 
             // 5. Handle Window Startup (Hide if launched with --background)
             bool startInBackground = e.Args.Contains("--background");
+#if STORE
+            startInBackground |= StoreIntegration.IsStartupActivation;
+#endif
             if (!startInBackground)
             {
                 ShowMainWindow();
@@ -269,6 +275,7 @@ namespace IdleSentry
             menu.Items.Add(prefItem);
             menu.Items.Add(new Separator());
 
+#if !STORE
             var updateItem = new MenuItem { Header = UpdateService.Shared.CanInstall || UpdateService.Shared.CanDownload
                 ? "Update available…" : "Check for Updates…", IsEnabled = !UpdateService.Shared.IsBusy };
             updateItem.Click += async (_, _) =>
@@ -279,6 +286,7 @@ namespace IdleSentry
             };
             menu.Items.Add(updateItem);
             menu.Items.Add(new Separator());
+#endif
 
             // Quit Application
             var quitItem = new MenuItem { Header = "Quit IdleSentry" };
@@ -338,7 +346,9 @@ namespace IdleSentry
 
         protected override void OnExit(ExitEventArgs e)
         {
+#if !STORE
             if (AppState != null) UpdateService.Shared.Dispose();
+#endif
             IsShuttingDown = true;
             AppState?.Dispose();
             _trayRetryTimer?.Stop();

@@ -4,8 +4,10 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
+#if !STORE
 using Velopack;
 using Velopack.Sources;
+#endif
 
 namespace IdleSentry;
 
@@ -18,6 +20,7 @@ public interface IUpdateBackend
     void PrepareRestart();
 }
 
+#if !STORE
 internal sealed class GitHubUpdateBackend : IUpdateBackend
 {
     private readonly UpdateManager _manager = new(new GithubSource(
@@ -35,13 +38,29 @@ internal sealed class GitHubUpdateBackend : IUpdateBackend
     public void PrepareRestart() => _manager.WaitExitThenApplyUpdates(null, silent: false, restart: true);
 }
 
+#else
+internal sealed class StoreUpdateBackend : IUpdateBackend
+{
+    public bool IsInstalled => false;
+    public string? PendingVersion => null;
+    public Task<string?> CheckAsync() => throw new NotSupportedException("Updates are managed by Microsoft Store.");
+    public Task DownloadAsync(Action<int> progress, CancellationToken token) => throw new NotSupportedException("Updates are managed by Microsoft Store.");
+    public void PrepareRestart() => throw new NotSupportedException("Updates are managed by Microsoft Store.");
+}
+#endif
+
 public enum UpdatePhase { Idle, Checking, Available, Downloading, Ready, Unavailable }
 
 /// Owns UI state; package selection, hashes and installation are handled by Velopack.
 public sealed class UpdateService : INotifyPropertyChanged, IDisposable
 {
+#if STORE
+    private static readonly Lazy<UpdateService> Instance = new(() => new(new StoreUpdateBackend(),
+        Path.Combine(AppDistribution.SettingsDirectory, "updates.json")));
+#else
     private static readonly Lazy<UpdateService> Instance = new(() => new(new GitHubUpdateBackend(),
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "IdleSentry", "updates.json")));
+        Path.Combine(AppDistribution.SettingsDirectory, "updates.json")));
+#endif
     public static UpdateService Shared => Instance.Value;
     private readonly IUpdateBackend _backend;
     private readonly string _preferencesPath;
@@ -59,7 +78,7 @@ public sealed class UpdateService : INotifyPropertyChanged, IDisposable
     public bool AutomaticChecks
     {
         get => _preferences.AutomaticChecks;
-        set { _preferences.AutomaticChecks = value; SavePreferences(); Notify(); }
+        set { if (AppDistribution.IsStore) return; _preferences.AutomaticChecks = value; SavePreferences(); Notify(); }
     }
     public event PropertyChangedEventHandler? PropertyChanged;
     public event Action<string>? UpdateFound;
@@ -68,6 +87,13 @@ public sealed class UpdateService : INotifyPropertyChanged, IDisposable
     {
         _backend = backend;
         _preferencesPath = preferencesPath;
+        if (AppDistribution.IsStore)
+        {
+            _preferences.AutomaticChecks = false;
+            Phase = UpdatePhase.Unavailable;
+            Status = "Updates are managed by Microsoft Store.";
+            return;
+        }
         try { _preferences = JsonSerializer.Deserialize<UpdatePreferences>(File.ReadAllText(preferencesPath)) ?? new(); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException) { }
         if (!backend.IsInstalled)

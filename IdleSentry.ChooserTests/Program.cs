@@ -9,13 +9,32 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+#if !STORE
         Velopack.VelopackApp.Build().SetArgs(Array.Empty<string>()).SetAutoApplyOnStartup(false).Run();
+#endif
         string fixtures = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "IdleSentry-chooser-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(fixtures);
         try
         {
+#if STORE
+            if (args.Contains("--startup-status"))
+            {
+                var startup = Windows.ApplicationModel.StartupTask.GetAsync("IdleSentryStartup").AsTask().GetAwaiter().GetResult();
+                Console.WriteLine($"Package: {Windows.ApplicationModel.Package.Current.Id.FullName}");
+                Console.WriteLine($"StartupTask: {startup.State}");
+                return 0;
+            }
+            if (args.Contains("--icons-only"))
+            {
+                StoreIconChecks.Run(Check);
+                Console.WriteLine($"PASS: {_checks} installed shell icon checks");
+                return 0;
+            }
+#endif
             Run(fixtures);
+#if !STORE
             UpdateChecks.Run(Check, fixtures).GetAwaiter().GetResult();
+#endif
             string? previewDirectory = args.Length == 2 && args[0] == "--preview-dir"
                 ? System.IO.Path.GetFullPath(args[1]) : null;
             StatusPresentationChecks.Run(Check, previewDirectory);

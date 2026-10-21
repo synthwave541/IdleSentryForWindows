@@ -15,7 +15,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/synthwave541/IdleSentryForWindows/releases/latest">Download latest</a> ·
+  <a href="https://apps.microsoft.com/detail/9nfl78zt5kbc">Get it from Microsoft Store</a> ·
+  <a href="https://github.com/synthwave541/IdleSentryForWindows/releases/latest">Standalone installers</a> ·
   <a href="https://github.com/synthwave541/IdleSentry">macOS version</a> ·
   <a href="https://zennoris.com">Website</a> ·
   <a href="https://github.com/synthwave541/IdleSentryForWindows/issues">Report an issue</a>
@@ -52,22 +53,24 @@ lock; it does not lock Windows or hide applications that you have not selected.
 
 ## Download and install
 
-Open the [latest release](https://github.com/synthwave541/IdleSentryForWindows/releases/latest) and
-choose the package for your PC:
+The recommended installation is [Microsoft Store](https://apps.microsoft.com/detail/9nfl78zt5kbc),
+which selects the right architecture and manages updates.
+
+For a standalone installation, open the [latest GitHub release](https://github.com/synthwave541/IdleSentryForWindows/releases/latest)
+and choose the package for your PC. These unsigned installers may trigger a Windows SmartScreen warning.
+Standalone updates remain available inside the app through GitHub. Store and standalone installations keep separate settings.
 
 | Package | Use it on |
 | --- | --- |
 | `win-x64-Setup.exe` | Intel and AMD 64-bit Windows PCs |
 | `win-arm64-Setup.exe` | Windows on ARM devices, including Snapdragon PCs |
-| `win-…-Portable.zip` | The same architecture, without running an installer |
 
 Requires **Windows 10 version 2004 (build 19041) or later**, or Windows 11.
 Mica effects are available on Windows 11. There is no 32-bit x86 build.
 
 The installer runs for the current user, adds a Start menu shortcut, and provides
-an uninstaller. A desktop shortcut is optional. Portable packages can be extracted
-to a folder and launched with `IdleSentry.exe`. Neither package requires a
-separate .NET installation.
+an uninstaller. Current releases provide Setup installers and updater packages;
+the `.nupkg` files are for the updater, not manual installation. No separate .NET installation is required.
 
 The current binaries are unsigned and may display Windows publisher or reputation
 warnings. Download only from this repository's releases. Each release includes

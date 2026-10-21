@@ -222,6 +222,9 @@ internal static class StatusPresentationChecks
         // MainWindow normally hides on close; detach the snapshot instead of starting its app lifecycle.
         window.Content = null;
         MonitoringLifecycleChecks.Run(application, check);
+#if STORE
+        StoreChecks.Run(application, check, previewDirectory);
+#endif
         application.Shutdown();
     }
 

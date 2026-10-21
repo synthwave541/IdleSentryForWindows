@@ -121,8 +121,7 @@ namespace IdleSentry
 
     public class AppState : INotifyPropertyChanged, IDisposable
     {
-        private static readonly string SettingsDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "IdleSentry");
+        private static readonly string SettingsDir = AppDistribution.SettingsDirectory;
         private static readonly string SettingsFile = Path.Combine(SettingsDir, "settings.json");
 
         // Win32 API structures and methods for User Inactivity (Idle Time)
@@ -268,6 +267,10 @@ namespace IdleSentry
             get => _launchAtStartup;
             set
             {
+#if STORE
+                if (!StartupChangeInProgress && _launchAtStartup != value)
+                    _ = ChangeStoreStartupAsync(value);
+#else
                 if (_launchAtStartup != value)
                 {
                     _launchAtStartup = value;
@@ -275,8 +278,50 @@ namespace IdleSentry
                     SaveSettings();
                     ToggleLaunchAtStartup(value);
                 }
+#endif
             }
         }
+
+        public bool StartupChangeInProgress { get; private set; }
+        public bool CanChangeStartup => !StartupChangeInProgress;
+
+        internal async Task RefreshStartupStateAsync()
+        {
+#if STORE
+            if (StartupChangeInProgress) return;
+            try { _launchAtStartup = await StoreIntegration.IsStartupEnabledAsync(); }
+            catch (Exception ex) { Debug.WriteLine($"Could not read packaged startup state: {ex.Message}"); }
+            OnPropertyChanged(nameof(LaunchAtStartup));
+#else
+            await Task.CompletedTask;
+#endif
+        }
+
+#if STORE
+        private async Task ChangeStoreStartupAsync(bool enable)
+        {
+            StartupChangeInProgress = true;
+            OnPropertyChanged(nameof(CanChangeStartup));
+            try
+            {
+                var result = await StoreIntegration.SetStartupAsync(enable);
+                _launchAtStartup = result.Enabled;
+                SaveSettings();
+                if (result.Message != null) SendNotification("Launch at sign-in", result.Message);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Packaged startup change failed: {ex.Message}");
+                SendNotification("Launch at sign-in", "Windows could not change startup. Check Settings → Apps → Startup.");
+            }
+            finally
+            {
+                StartupChangeInProgress = false;
+                OnPropertyChanged(nameof(LaunchAtStartup));
+                OnPropertyChanged(nameof(CanChangeStartup));
+            }
+        }
+#endif
 
         public ObservableCollection<AppRunningState> RunningStates
         {
@@ -903,6 +948,7 @@ namespace IdleSentry
             }
         }
 
+#if !STORE
         internal void RefreshStartupPath() => ToggleLaunchAtStartup(true);
 
         private void ToggleLaunchAtStartup(bool enable)
@@ -936,6 +982,8 @@ namespace IdleSentry
             }
         }
 
+#endif
+
         private void LoadSettings()
         {
             try
@@ -966,6 +1014,10 @@ namespace IdleSentry
                     _monitoredApps = new ObservableCollection<MonitoredApp>();
                 }
 
+#if STORE
+                // Windows owns the startup state; refresh it asynchronously after launch.
+                _launchAtStartup = false;
+#else
                 // Verify if startup registry matches settings
                 try
                 {
@@ -983,6 +1035,7 @@ namespace IdleSentry
                 {
                     // Ignore registry check errors on load
                 }
+#endif
             }
             catch (Exception ex)
             {

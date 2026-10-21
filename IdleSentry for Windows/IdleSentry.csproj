@@ -3,6 +3,9 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <DistributionChannel Condition="'$(DistributionChannel)' == ''">Standalone</DistributionChannel>
+    <TargetFramework Condition="'$(DistributionChannel)' == 'Store'">net8.0-windows10.0.19041.0</TargetFramework>
+    <DefineConstants Condition="'$(DistributionChannel)' == 'Store'">$(DefineConstants);STORE</DefineConstants>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
@@ -12,7 +15,7 @@
     <AssemblyName>IdleSentry</AssemblyName>
     <RootNamespace>IdleSentry</RootNamespace>
     <!-- Windows patch version. The UI and installer read this assembly metadata. -->
-    <Version>1.0.15</Version>
+    <Version>1.0.16</Version>
     <StartupObject>IdleSentry.Program</StartupObject>
     <Product>IdleSentry</Product>
     <Company>Zennoris</Company>
@@ -26,7 +29,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Velopack" Version="1.2.161" />
+    <PackageReference Include="Velopack" Version="1.2.161" Condition="'$(DistributionChannel)' != 'Store'" />
     <PackageReference Include="H.NotifyIcon.Wpf" Version="2.4.1" />
     <PackageReference Include="wpf-ui" Version="4.3.0" />
   </ItemGroup>
@@ -35,5 +38,10 @@
     <Resource Include="IdleSentry.ico" />
     <Resource Include="IdleSentry.png" />
   </ItemGroup>
+
+  <Target Name="ValidateDistributionChannel" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(DistributionChannel)' != 'Store' and '$(DistributionChannel)' != 'Standalone'"
+           Text="DistributionChannel must be Standalone or Store." />
+  </Target>
 
 </Project>

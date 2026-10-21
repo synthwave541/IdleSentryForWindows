@@ -24,6 +24,7 @@ namespace IdleSentry
             SidebarNavigation.ApplyTemplate();
             SidebarNavigation.Navigate("0");
             Loaded += (_, _) => UpdateSelectionIndicator(animate: false);
+            Activated += async (_, _) => await _appState.RefreshStartupStateAsync();
             _appState.PropertyChanged += (_, args) =>
             {
                 if (args.PropertyName == nameof(AppState.HasClosingQueue) && !_appState.HasClosingQueue)
@@ -150,7 +151,7 @@ namespace IdleSentry
         {
             try
             {
-                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "IdleSentry");
+                string folder = AppDistribution.SettingsDirectory;
                 if (!Directory.Exists(folder))
                 {
                     Directory.CreateDirectory(folder);
