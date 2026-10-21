@@ -160,7 +160,7 @@ The license does not grant trademark rights to the IdleSentry name or branding.
 
 Click the sidebar countdown/status card to inspect running monitored apps in a scrollable queue, ordered by the next deadline. Long names truncate in the compact card and show in full on hover; an additional-app count avoids listing every name in the sidebar. The queue stays open, retaining its scroll position when activity resets the timer, and closes when monitoring pauses or no monitored apps remain running. Escape or clicking outside dismisses it.
 
-Source version 1.0.14 matches the macOS app. Download assets on the latest published release may have an earlier version until the next release is published.
+Source version 1.0.15 matches the macOS app. Windows 1.0.15 Setup assets were refreshed on 21 October 2026 with sidebar and queue UI fixes.
 
 ## In-app updates (1.0.15+)
 
@@ -171,3 +171,6 @@ Updates use Velopack 1.2.161, with separate `win-x64` and `win-arm64` feeds and 
 **Upgrading from 1.0.14:** quit IdleSentry, uninstall the older version from Windows Settings, then run the matching 1.0.15 Setup once. The older uninstaller preserves your settings. Future versions install from inside the app. Do not run the old and new copies side by side. Portable and legacy installations require manual updates; new portable downloads are no longer published.
 
 To publish future updates, bump the project version, run `build.ps1 -Arch all`, then `build-installer.ps1 -Arch all -SkipBuild`. Upload both Setup executables, all generated `.nupkg` files, both `releases.win-*.json` feeds, source and checksums together in a stable release in **this repository**, then mark it latest. Preserve package IDs, channel names and generated package filenames across releases. Never publish one architecture alone as the latest release. GitHub Actions runs the native tests and packages both architectures. This updater is independent of Windows signing: unsigned Setup files can still show SmartScreen warnings.
+
+
+The refreshed 1.0.15 assets retain the same application version. Existing 1.0.15 installations report up to date; reinstall the matching Setup to receive the refreshed UI. Future in-app updates require a higher version. Daily automatic checks require the app to be running and network access to GitHub; manual checks are available in About and the tray menu.

@@ -174,8 +174,18 @@ internal static class StatusPresentationChecks
             "badge returns to one running app without changing its circular shape");
         check(activityBar.TransformToAncestor(root).Transform(new Point()).X < 220,
             "countdown is attached to the sidebar rather than the content canvas");
-        check(timer.Foreground is SolidColorBrush timerBrush && timerBrush.Color == Color.FromRgb(251, 191, 36),
-            "countdown is amber throughout its duration");
+        check(timer.Foreground is SolidColorBrush timerBrush && timerBrush.Color == ((SolidColorBrush)application.Resources["TextFillColorPrimaryBrush"]).Color,
+            "countdown uses neutral primary text like the macOS sidebar");
+        var chevron = (Wpf.Ui.Controls.SymbolIcon)window.FindName("ActivityQueueChevron");
+        var queueButton = (Button)window.FindName("ActivityQueueButton");
+        double chevronRight = chevron.TranslatePoint(new Point(chevron.ActualWidth, 0), queueButton).X;
+        check(Math.Abs(queueButton.ActualWidth - chevronRight - 13) < 2 && chevron.ActualWidth >= 10
+            && Math.Abs(queueButton.ActualWidth - activityBar.ActualWidth) < 2,
+            "queue chevron is a complete icon at the right edge of the card");
+        var cardSurface = (Border)queueButton.Template.FindName("CardSurface", queueButton);
+        check(Math.Abs(cardSurface.ActualWidth - activityBar.ActualWidth) < 1
+            && Math.Abs(cardSurface.ActualHeight - activityBar.ActualHeight) < 1,
+            "the button surface and hit target cover the whole sidebar card");
         check(frame.Content is DashboardPage && Descendants<TextBlock>(frame).Any(text => text.Text == "Dashboard"),
             "dashboard content is visible on first launch without navigating");
         check(timer.Text == "00:50" && timer.Visibility == Visibility.Visible, "shared timer binds to the live view model");
@@ -200,6 +210,8 @@ internal static class StatusPresentationChecks
         navigation.Navigate("0");
         Layout(root, 840, 580);
         check(timer.Text == "00:05", "urgent state updates the existing indicator without an extra alert");
+        check(queueButton.Background is SolidColorBrush imminentBackground && imminentBackground.Color.A <= 10,
+            "imminent countdown retains the quiet neutral card background");
         SavePreview(root, previewDirectory, "dashboard-imminent-small.png", 840, 580);
         SetField(urgent, "_isMonitoring", false);
         window.DataContext = null;
@@ -269,6 +281,9 @@ internal static class StatusPresentationChecks
         Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Background);
         popup.Child.UpdateLayout();
         check(popup.IsOpen && items.Items.Count == 30, "clicking the sidebar opens the complete queue");
+        var surface = (Border)window.FindName("ClosingQueueSurface");
+        check(surface.Background is SolidColorBrush surfaceBrush && surfaceBrush.Color.A == 255 && surfaceBrush.Opacity == 1,
+            "queue popup has an opaque surface even outside the main window");
         scroll.ScrollToEnd();
         Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Background);
         check(scroll.VerticalOffset > 0, "large closing queues scroll to the last apps");

@@ -3,6 +3,8 @@
 - Added optional daily GitHub update checks, download progress and user-approved install/restart.
 - Migrated Windows Setup to Velopack with separate x64 and ARM64 feeds.
 - Preserved existing preferences and refreshed login startup for the new installation location.
+- Refreshed Windows installers: neutral sidebar countdown, correctly aligned chevron, opaque closing queue, and full-card hover/keyboard focus feedback.
+- Verified a real ARM64 GitHub update download, installation and restart in the Windows VM. Replacing the 1.0.15 assets does not offer an automatic update to existing 1.0.15 installations; reinstall Setup to receive these UI fixes.
 
 # Release history
 
