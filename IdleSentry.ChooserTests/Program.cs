@@ -9,6 +9,7 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        Velopack.VelopackApp.Build().SetArgs(Array.Empty<string>()).SetAutoApplyOnStartup(false).Run();
         string fixtures = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "IdleSentry-chooser-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(fixtures);
         try
