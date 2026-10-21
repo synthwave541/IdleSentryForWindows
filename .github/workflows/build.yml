@@ -42,6 +42,9 @@ jobs:
           $assets = Get-ChildItem './IdleSentry for Windows/dist' -File | Where-Object { $_.Extension -in '.exe', '.zip', '.nupkg', '.json' } | Sort-Object Name
           $hashes = $assets | ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)" }
           [IO.File]::WriteAllLines((Join-Path $PWD 'IdleSentry for Windows/dist/SHA256SUMS.txt'), [string[]]$hashes)
+      - name: Smoke-test native installer and lifecycle hooks
+        shell: pwsh
+        run: "& './IdleSentry for Windows/test-installer.ps1'"
       - name: Upload release packages
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:

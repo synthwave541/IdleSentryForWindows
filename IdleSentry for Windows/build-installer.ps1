@@ -35,6 +35,13 @@ foreach ($target in $targets) {
     # Keep the framework's package and releases JSON filenames exactly as generated.
     # Portable archives are intentionally omitted: users should install Setup for updates and login startup.
     Get-ChildItem $distDir -Filter "*win-$target*Portable.zip" | Remove-Item
+    $assetsFile = Join-Path $distDir "assets.win-$target.json"
+    $entries = Get-Content $assetsFile -Raw | ConvertFrom-Json
+    $entries = @($entries | Where-Object { $_.Type -ne 'Portable' })
+    foreach ($entry in $entries) {
+        if ($entry.Type -eq 'Installer') { $entry.RelativeFileName = "IdleSentry-$version-win-$target-Setup.exe" }
+    }
+    ConvertTo-Json -InputObject $entries -Compress | Set-Content $assetsFile -Encoding utf8
 }
 $assets = Get-ChildItem -LiteralPath $distDir -File | Where-Object { $_.Extension -in '.exe', '.zip', '.nupkg', '.json' }
 $hashes = foreach ($asset in $assets) { "$((Get-FileHash -LiteralPath $asset.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($asset.Name)" }
