@@ -1,3 +1,9 @@
+## 1.0.15
+
+- Added optional daily GitHub update checks, download progress and user-approved install/restart.
+- Migrated Windows Setup to Velopack with separate x64 and ARM64 feeds.
+- Preserved existing preferences and refreshed login startup for the new installation location.
+
 # Release history
 
 ## 1.0.14 — 2026-10-21

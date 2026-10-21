@@ -117,13 +117,13 @@ dotnet run --project './IdleSentry.ChooserTests/IdleSentry.ChooserTests.csproj' 
 ```
 
 To build the interactive installers, install
-[Inno Setup 6.3 or later](https://jrsoftware.org/isdl.php), then run:
+the pinned Velopack CLI (the script installs it automatically), then run:
 
 ```powershell
 & './IdleSentry for Windows/build-installer.ps1' -Arch all
 ```
 
-Setup executables, portable ZIPs, and checksums are written to
+Setup executables, architecture-specific update packages/feeds, and checksums are written to
 `IdleSentry for Windows/dist/`. The scripts compile the installer; end users run
 the resulting `Setup.exe`.
 
@@ -132,7 +132,7 @@ the resulting `Setup.exe`.
 | Path | Contents |
 | --- | --- |
 | `IdleSentry for Windows/` | Application source, assets, dependency notices, and build scripts |
-| `IdleSentry for Windows/installer/` | Inno Setup installer source |
+| `IdleSentry for Windows/installer/` | Legacy 1.0.14 Inno Setup installer source |
 | `IdleSentry.ChooserTests/` | App discovery, navigation, presentation, and countdown checks |
 | `.github/workflows/` | Windows build and verification workflow |
 | `docs/images/` | Documentation images using sample data |
@@ -161,3 +161,13 @@ The license does not grant trademark rights to the IdleSentry name or branding.
 Click the sidebar countdown/status card to inspect running monitored apps in a scrollable queue, ordered by the next deadline. Long names truncate in the compact card and show in full on hover; an additional-app count avoids listing every name in the sidebar. The queue stays open, retaining its scroll position when activity resets the timer, and closes when monitoring pauses or no monitored apps remain running. Escape or clicking outside dismisses it.
 
 Source version 1.0.14 matches the macOS app. Download assets on the latest published release may have an earlier version until the next release is published.
+
+## In-app updates (1.0.15+)
+
+Open **About → Software updates**, or choose **Check for Updates…** in the tray menu. IdleSentry checks its official GitHub releases once a day when automatic checking is enabled. You can disable these checks. Update requests contain no monitored-app list or activity. New releases are announced with a tray notification; download progress and **Install & Restart** are in About. Downloads never install silently, including on the next app launch.
+
+Updates use Velopack 1.2.161, with separate `win-x64` and `win-arm64` feeds and package integrity verification. First-time 1.0.15 installation uses a per-user Setup, without administrator access. Preferences remain in `%LOCALAPPDATA%\IdleSentry`; the new installation uses `%LOCALAPPDATA%\Zennoris.IdleSentry`. Login startup is refreshed to the stable launch stub.
+
+**Upgrading from 1.0.14:** quit IdleSentry, uninstall the older version from Windows Settings, then run the matching 1.0.15 Setup once. The older uninstaller preserves your settings. Future versions install from inside the app. Do not run the old and new copies side by side. Portable and legacy installations require manual updates; new portable downloads are no longer published.
+
+To publish future updates, bump the project version, run `build.ps1 -Arch all`, then `build-installer.ps1 -Arch all -SkipBuild`. Upload both Setup executables, all generated `.nupkg` files, both `releases.win-*.json` feeds, source and checksums together in a stable release in **this repository**, then mark it latest. Preserve package IDs, channel names and generated package filenames across releases. Never publish one architecture alone as the latest release. GitHub Actions runs the native tests and packages both architectures. This updater is independent of Windows signing: unsigned Setup files can still show SmartScreen warnings.

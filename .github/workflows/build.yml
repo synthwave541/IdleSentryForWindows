@@ -34,16 +34,12 @@ jobs:
       - name: Build both architectures
         shell: pwsh
         run: "& './IdleSentry for Windows/build.ps1' -Arch all"
-      - name: Build installers, portable packages and source archive
+      - name: Build installers, update feeds and source archive
         shell: pwsh
         run: |
-          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
-            choco install innosetup --yes --no-progress
-            if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed.' }
-          }
           & './IdleSentry for Windows/build-installer.ps1' -Arch all -SkipBuild
           & './IdleSentry for Windows/package-source.ps1'
-          $assets = Get-ChildItem './IdleSentry for Windows/dist' -File | Where-Object { $_.Extension -in '.exe', '.zip' } | Sort-Object Name
+          $assets = Get-ChildItem './IdleSentry for Windows/dist' -File | Where-Object { $_.Extension -in '.exe', '.zip', '.nupkg', '.json' } | Sort-Object Name
           $hashes = $assets | ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)" }
           [IO.File]::WriteAllLines((Join-Path $PWD 'IdleSentry for Windows/dist/SHA256SUMS.txt'), [string[]]$hashes)
       - name: Upload release packages

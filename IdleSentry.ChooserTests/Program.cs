@@ -14,6 +14,7 @@ internal static class Program
         try
         {
             Run(fixtures);
+            UpdateChecks.Run(Check, fixtures).GetAwaiter().GetResult();
             string? previewDirectory = args.Length == 2 && args[0] == "--preview-dir"
                 ? System.IO.Path.GetFullPath(args[1]) : null;
             StatusPresentationChecks.Run(Check, previewDirectory);

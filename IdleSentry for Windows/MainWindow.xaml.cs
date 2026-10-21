@@ -134,6 +134,17 @@ namespace IdleSentry
             }
         }
 
+        public void ShowUpdates() => SidebarNavigation.Navigate("4");
+
+        private async void CheckUpdates_Click(object sender, RoutedEventArgs e) => await UpdateService.Shared.CheckAsync();
+        private async void DownloadUpdate_Click(object sender, RoutedEventArgs e) => await UpdateService.Shared.DownloadAsync();
+        private void InstallUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            if (System.Windows.MessageBox.Show("IdleSentry will close, install the update and reopen. Your monitored apps and settings will be kept.",
+                "Install update?", System.Windows.MessageBoxButton.OKCancel, MessageBoxImage.Information) == System.Windows.MessageBoxResult.OK)
+                UpdateService.Shared.InstallAndRestart(() => ((App)Application.Current).SafeShutdown());
+        }
+
         // Open local settings storage folder in Windows Explorer
         private void OpenSettingsFolder_Click(object sender, RoutedEventArgs e)
         {

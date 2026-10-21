@@ -12,7 +12,8 @@
     <AssemblyName>IdleSentry</AssemblyName>
     <RootNamespace>IdleSentry</RootNamespace>
     <!-- Windows patch version. The UI and installer read this assembly metadata. -->
-    <Version>1.0.14</Version>
+    <Version>1.0.15</Version>
+    <StartupObject>IdleSentry.Program</StartupObject>
     <Product>IdleSentry</Product>
     <Company>Zennoris</Company>
     <Copyright>Copyright © 2026 Zennoris. All rights reserved.</Copyright>
@@ -25,6 +26,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Velopack" Version="1.2.161" />
     <PackageReference Include="H.NotifyIcon.Wpf" Version="2.4.1" />
     <PackageReference Include="wpf-ui" Version="4.3.0" />
   </ItemGroup>

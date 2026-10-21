@@ -903,6 +903,8 @@ namespace IdleSentry
             }
         }
 
+        internal void RefreshStartupPath() => ToggleLaunchAtStartup(true);
+
         private void ToggleLaunchAtStartup(bool enable)
         {
             try
@@ -913,6 +915,10 @@ namespace IdleSentry
                     if (enable)
                     {
                         string? exePath = Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule?.FileName;
+                        // Use Velopack’s stable launch stub across version replacements.
+                        var root = Velopack.Locators.VelopackLocator.Current.RootAppDir;
+                        if (!string.IsNullOrEmpty(root) && File.Exists(Path.Combine(root, "IdleSentry.exe")))
+                            exePath = Path.Combine(root, "IdleSentry.exe");
                         if (!string.IsNullOrEmpty(exePath))
                         {
                             key.SetValue("IdleSentry", $"\"{exePath}\" --background");
@@ -966,7 +972,11 @@ namespace IdleSentry
                     using (var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", false))
                     {
                         bool hasRegistry = key?.GetValue("IdleSentry") != null;
-                        _launchAtStartup = hasRegistry;
+                        // The legacy uninstaller removes its Run entry but preserves settings.
+                        // Keep that saved preference during the one-time Velopack migration.
+                        string? installedRoot = Velopack.Locators.VelopackLocator.Current.RootAppDir;
+                        _launchAtStartup = hasRegistry || (_launchAtStartup && installedRoot != null &&
+                            File.Exists(Path.Combine(installedRoot, "Update.exe")));
                     }
                 }
                 catch

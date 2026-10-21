@@ -424,6 +424,20 @@
                             <TextBlock Text="Works entirely on your device. No telemetry or trackers." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="440" />
                         </StackPanel>
                     </Border>
+                    <Border Style="{StaticResource FluentSettingsCardStyle}" Margin="0,8,0,0" DataContext="{x:Static local:UpdateService.Shared}">
+                        <StackPanel>
+                            <TextBlock Text="Software updates" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text="{Binding Status}" Margin="0,8,0,8" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" AutomationProperties.LiveSetting="Polite" />
+                            <CheckBox Content="Check for updates automatically" IsChecked="{Binding AutomaticChecks}" Margin="0,0,0,8" />
+                            <TextBlock Text="Checks GitHub for releases. Downloads and installation require your approval. Your monitored apps and activity stay on this PC." TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,10" />
+                            <ProgressBar Value="{Binding Progress}" Maximum="100" Height="4" Margin="0,0,0,10" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <WrapPanel>
+                                <ui:Button Content="Check for Updates" Click="CheckUpdates_Click" IsEnabled="{Binding CanCheck}" Margin="0,0,8,8" />
+                                <ui:Button Content="Download Update" Click="DownloadUpdate_Click" IsEnabled="{Binding CanDownload}" Margin="0,0,8,8" />
+                                <ui:Button Content="Install &amp; Restart" Click="InstallUpdate_Click" IsEnabled="{Binding CanInstall}" Appearance="Primary" Margin="0,0,0,8" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
                     <!-- Credits Card -->
                     <Border Style="{StaticResource FluentSettingsCardStyle}" Margin="0,6,0,0">
                         <Grid>

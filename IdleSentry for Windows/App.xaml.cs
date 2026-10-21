@@ -49,6 +49,11 @@ namespace IdleSentry
 
             // 3. Setup System Tray Icon
             SetupTrayIcon();
+            UpdateService.Shared.UpdateFound += version => OnNotificationRequested("IdleSentry update available",
+                $"Version {version} is ready to download. Open About to update when you’re ready.");
+            _ = UpdateService.Shared.StartAsync();
+            // Refresh any 1.0.14 startup path after the first launch of the new installer.
+            if (AppState.LaunchAtStartup) AppState.RefreshStartupPath();
 
             // 4. Start listening for subsequent launches (so they can wake this instance)
             StartPipeServer();
@@ -264,6 +269,17 @@ namespace IdleSentry
             menu.Items.Add(prefItem);
             menu.Items.Add(new Separator());
 
+            var updateItem = new MenuItem { Header = UpdateService.Shared.CanInstall || UpdateService.Shared.CanDownload
+                ? "Update available…" : "Check for Updates…", IsEnabled = !UpdateService.Shared.IsBusy };
+            updateItem.Click += async (_, _) =>
+            {
+                ShowMainWindow();
+                if (MainWindow is MainWindow window) window.ShowUpdates();
+                await UpdateService.Shared.CheckAsync();
+            };
+            menu.Items.Add(updateItem);
+            menu.Items.Add(new Separator());
+
             // Quit Application
             var quitItem = new MenuItem { Header = "Quit IdleSentry" };
             quitItem.Click += (s, ev) => SafeShutdown();
@@ -322,6 +338,7 @@ namespace IdleSentry
 
         protected override void OnExit(ExitEventArgs e)
         {
+            if (AppState != null) UpdateService.Shared.Dispose();
             IsShuttingDown = true;
             AppState?.Dispose();
             _trayRetryTimer?.Stop();
