@@ -20,6 +20,7 @@ if (-not (Test-Path (Join-Path $root 'IdleSentry.exe'))) { throw 'Stable launch 
 Run-And-Wait $exe @('--veloapp-updated', $version)
 if (Get-Process IdleSentry -ErrorAction SilentlyContinue) { throw 'An installer hook started monitoring.' }
 $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+New-Item -Path $runKey -Force | Out-Null
 New-ItemProperty $runKey -Name IdleSentry -Value "`"$(Join-Path $root 'IdleSentry.exe')`" --background" -PropertyType String -Force | Out-Null
 Run-And-Wait (Join-Path $root 'Update.exe') @('--silent', 'uninstall')
 if (Test-Path $exe) { throw 'Uninstall left the current application installed.' }
