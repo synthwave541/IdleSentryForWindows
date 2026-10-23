@@ -253,8 +253,10 @@ namespace IdleSentry
         public double SystemIdleTime
         {
             get => _systemIdleTime;
-            private set { _systemIdleTime = value; OnPropertyChanged(); }
+            private set { _systemIdleTime = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsSystemIdle)); }
         }
+
+        public bool IsSystemIdle => IsMonitoring && MonitoredApps.Count > 0 && SystemIdleTime > CountdownDelay;
 
         public bool IsCountdownActive
         {
@@ -475,6 +477,7 @@ namespace IdleSentry
 
         private void NotifyMonitoringStatus()
         {
+            OnPropertyChanged(nameof(IsSystemIdle));
             OnPropertyChanged(nameof(MonitoringTitle));
             OnPropertyChanged(nameof(MonitoringDescription));
             OnPropertyChanged(nameof(MonitoredAppsSummary));
@@ -523,8 +526,11 @@ namespace IdleSentry
                         _timer.Interval = TimeSpan.FromMilliseconds(_currentInterval);
                     }
                     // Notifications cannot prevent the completed state from reaching the UI.
-                    foreach (string name in result.ClosedApps)
-                        SendNotification("App Closed Automatically", $"{name} was quit because it exceeded the idle timeout.");
+                    if (result.ClosedApps.Count > 0)
+                    {
+                        var notification = CloseNotification.Create(result.ClosedApps);
+                        SendNotification(notification.Title, notification.Body);
+                    }
                 } while (_refreshRequested && !_disposed);
             }
             catch (Exception ex)

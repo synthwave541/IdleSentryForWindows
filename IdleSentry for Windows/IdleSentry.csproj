@@ -15,7 +15,7 @@
     <AssemblyName>IdleSentry</AssemblyName>
     <RootNamespace>IdleSentry</RootNamespace>
     <!-- Windows patch version. The UI and installer read this assembly metadata. -->
-    <Version>1.0.16</Version>
+    <Version>1.0.17</Version>
     <StartupObject>IdleSentry.Program</StartupObject>
     <Product>IdleSentry</Product>
     <Company>Zennoris</Company>

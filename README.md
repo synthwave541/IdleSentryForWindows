@@ -39,6 +39,8 @@ Intel/AMD x64 and Windows on ARM.
 - **Choose apps by name.** Search installed and running apps, see their icons, and add several at once. Manual executable browsing is available when needed.
 - **Set an inactivity timeout.** Choose from 10 seconds to 60 minutes. Keyboard or mouse activity resets the countdown.
 - **See what closes next.** A single amber countdown stays in the sidebar across all pages; app rows show their running status.
+- **See when your PC is idle.** A compact clock-and-pause card appears above the countdown after the input grace period and hides when input resumes or monitoring is paused.
+- **Know which apps closed.** Apps closed in the same check appear in one notification, with bounded names and an additional-app count for longer lists.
 - **Choose how apps close.** Standard Quit requests a normal close before forcing remaining processes to exit. Force Quit closes them immediately.
 - **Keep it in the tray.** Closing the window keeps monitoring active. Pause monitoring or quit IdleSentry from its tray menu.
 - **Match your desktop.** Fluent styling, your Windows accent color, and selection motion that respects the Windows animation preference.

@@ -38,6 +38,7 @@ internal static class StatusPresentationChecks
         SetField(state, "_globalTimeout", 60d);
         SetField(state, "_isMonitoring", true);
         SetField(state, "_isCountdownActive", true);
+        SetField(state, "_systemIdleTime", 11.45d);
         return state;
     }
 
@@ -189,6 +190,15 @@ internal static class StatusPresentationChecks
         check(frame.Content is DashboardPage && Descendants<TextBlock>(frame).Any(text => text.Text == "Dashboard"),
             "dashboard content is visible on first launch without navigating");
         check(timer.Text == "00:50" && timer.Visibility == Visibility.Visible, "shared timer binds to the live view model");
+        var idleCard = (FrameworkElement)window.FindName("SystemIdleCard");
+        check(idleCard.Visibility == Visibility.Visible
+            && idleCard.TranslatePoint(new Point(0, idleCard.ActualHeight), root).Y < activityBar.TranslatePoint(new Point(), root).Y,
+            "system idle card appears above the countdown without overlapping it");
+        typeof(AppState).GetProperty(nameof(AppState.SystemIdleTime))!.SetValue(windowState, 0d);
+        Layout(root, 960, 680);
+        check(idleCard.Visibility == Visibility.Collapsed, "keyboard or mouse activity hides the idle card through its binding");
+        typeof(AppState).GetProperty(nameof(AppState.SystemIdleTime))!.SetValue(windowState, 11.45d);
+        Layout(root, 960, 680);
         check(frame.BorderThickness == new Thickness(0) && frame.FocusVisualStyle == null && !frame.IsTabStop,
             "page host has no stock tab frame or pane-sized focus target");
         var pagePeer = UIElementAutomationPeer.CreatePeerForElement(frame);
@@ -218,6 +228,7 @@ internal static class StatusPresentationChecks
         window.DataContext = urgent;
         Layout(root, 960, 680);
         check(timer.Visibility == Visibility.Collapsed, "paused view hides the time readout");
+        check(idleCard.Visibility == Visibility.Collapsed, "paused monitoring hides the idle card even with stale idle time");
         SavePreview(root, previewDirectory, "dashboard-paused.png", 960, 680);
         // MainWindow normally hides on close; detach the snapshot instead of starting its app lifecycle.
         window.Content = null;

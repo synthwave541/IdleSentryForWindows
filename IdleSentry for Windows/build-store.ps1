@@ -8,7 +8,7 @@ and a bundle for Partner Center. Local testing uses separate test-signed copies.
 [CmdletBinding()]
 param(
     [ValidateSet('x64', 'arm64', 'all')][string]$Arch = 'all',
-    [string]$Version = '1.0.16.0',
+    [string]$Version = '1.0.17.0',
     [string]$OutputDirectory,
     [string]$WindowsSdkVersion = '10.0.26100.0'
 )

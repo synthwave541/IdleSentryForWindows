@@ -1,81 +1,49 @@
 # Publishing IdleSentry for Windows
 
-The Windows source repository is
-[synthwave541/IdleSentryForWindows](https://github.com/synthwave541/IdleSentryForWindows).
-The macOS counterpart is maintained separately in
-[synthwave541/IdleSentry](https://github.com/synthwave541/IdleSentry).
+The Windows source repository is [synthwave541/IdleSentryForWindows](https://github.com/synthwave541/IdleSentryForWindows). The macOS app has its own repository and release process.
 
-## Source versus release files
+## Standalone GitHub releases
 
-Commit application code, assets, tests, documentation, dependency notices, build
-scripts, and `installer/IdleSentry.iss`. The installer scripts are source; users
-run the compiled Setup executable.
+Standalone builds use .NET 8 and Velopack 1.2.161. Keep the package ID `Zennoris.IdleSentry` and the `win-x64` / `win-arm64` channels unchanged so existing installations can upgrade.
 
-Do not commit `bin/`, `obj/`, `publish/`, `dist/`, personal settings, local editor
-files, signing material, or credentials. The root `.gitignore` excludes these,
-as well as a local macOS checkout named `IdleSentry/` beside the Windows project.
-That local checkout is not part of the Windows repository.
+1. Increase `<Version>` in `IdleSentry.csproj`, update `CHANGELOG.md`, and review the source diff.
+2. Run `dotnet run --project './IdleSentry.ChooserTests/IdleSentry.ChooserTests.csproj' -c Release` from the repository root. Verify the actual Windows interface and closing behavior using disposable apps.
+3. Commit and push the reviewed source. Wait for the Windows build workflow to pass. It runs discovery, presentation and updater checks, builds both architectures, packages installers/feeds/source, and smoke-tests the native x64 installer and lifecycle hooks.
+4. Prefer the workflow's `IdleSentry-Windows-release` artifact for publication, so the binaries and source archive correspond to the published commit. For local packaging, run `build.ps1 -Arch all`, then `build-installer.ps1 -Arch all -SkipBuild` and `package-source.ps1` from this directory. Stage new source files in Git before creating the source archive; the script uses the Git index as its file manifest.
+5. Verify both update feeds, package identities, versions, architectures, file sizes, hashes and source archive contents. Regenerate `SHA256SUMS.txt` after the source archive is present. The workflow does this automatically.
+6. Tag the verified commit `v<version>`. Create a draft GitHub release and upload the complete asset set below. Verify the uploaded asset sizes and SHA-256 digests before publishing it as the latest stable release.
+7. Verify the public latest-release endpoint and both public updater feeds after publication. Update website download links separately when ready.
 
-## Prepare a release
-
-Run commands below from this project's directory:
-
-1. Set `<Version>` in `IdleSentry.csproj` to the intended release version.
-2. Run the development checks from the repository root:
-   `dotnet run --project './IdleSentry.ChooserTests/IdleSentry.ChooserTests.csproj' -c Release`.
-3. Run `./package-source.ps1` to create a clean source ZIP containing the root
-   README, documentation, workflow, application source, and tests.
-4. With .NET 8 SDK and Inno Setup 6.3+ installed, run
-   `./build-installer.ps1 -Arch all`. This builds x64 and ARM64 executables,
-   compiles installers, creates portable ZIPs, and generates `SHA256SUMS.txt`.
-5. Verify the packages, commit the reviewed source, and create a GitHub release
-   targeting that commit. Use `v<version>` for a regular release and mark it
-   **Latest** so GitHub displays the version in the repository's Releases panel.
-   Use a `-preview.n` suffix and the prerelease flag only for preview releases;
-   GitHub does not allow prereleases to be marked Latest.
-
-Run the source-packaging step before the installer step so the source ZIP is
-included in the checksum file. The source ZIP and GitHub's automatically
-produced source archives serve the same purpose; the former is also covered by
-our release checksum list.
-
-## Release assets
-
-Attach these files from `dist/` to the GitHub release:
+Publish both architectures together. The complete asset set is:
 
 - `IdleSentry-<version>-win-x64-Setup.exe`
 - `IdleSentry-<version>-win-arm64-Setup.exe`
-- `IdleSentry-<version>-win-x64-Portable.zip`
-- `IdleSentry-<version>-win-arm64-Portable.zip`
+- Both `Zennoris.IdleSentry-<version>-win-*-full.nupkg` packages
+- Both `releases.win-*.json` feeds
+- Both `assets.win-*.json` manifests and `RELEASES-win-*` compatibility feeds
 - `IdleSentry-<version>-Windows-Source.zip`
 - `SHA256SUMS.txt`
 
-The CI workflow runs the development checks and publishes self-contained builds
-as workflow artifacts. It does not install Inno Setup, sign binaries, or publish
-GitHub releases automatically. Release packages are built with the scripts above.
+Preserve the generated package and feed filenames. New portable ZIPs are not published. Users install Setup.exe; updater packages and feeds are consumed by the app.
 
-## Installer behavior
+Existing standalone 1.0.15+ installations can check from About or the tray menu, download the update, then choose Install & Restart. Downloads do not install silently on launch. Preferences stay in `%LOCALAPPDATA%\IdleSentry`. The legacy 1.0.14 installer needs a one-time manual uninstall/reinstall; its uninstaller preserves preferences.
 
-The installer supports Windows 10 build 19041 and newer. It installs for the
-current user under `%LOCALAPPDATA%\Programs\IdleSentry`, adds a Start menu shortcut,
-and registers an uninstaller. A desktop shortcut is optional. .NET is included;
-users do not need to install the SDK or runtime.
+Local update rehearsals validate package discovery, integrity, application replacement, restart and preference preservation. Emulated x64 testing is not physical x64 testing; native x64 CI provides additional installer coverage. Public GitHub delivery can be verified only after publication.
 
-Quit the tray app before upgrading or uninstalling. Personal preferences are
-retained after uninstall. A login-startup entry is removed only when it points
-to the installed copy. Portable packages use the same local settings location.
+## Microsoft Store packages
 
-Before a stable release, check installation, launch, discovery, idle closing,
-activity reset, tray controls, login startup, upgrade, and uninstall on both x64
-and ARM64 Windows machines. Automated checks and cross-compilation do not replace
-these device tests.
+The Store build is a separate distribution channel. It uses package-owned settings, Windows startup tasks and Microsoft Store updates, with no Velopack dependency.
 
-## Signing
+Run `build-store.ps1 -Arch all -Version <major.minor.patch.0>` on Windows with .NET 8 and Windows SDK 10.0.26100.0. Use a fresh local output directory. The script builds both architectures, generates shell assets and a PRI resource index, and runs MakeAppx validation for each MSIX and the combined bundle.
 
-The current scripts produce unsigned binaries. Windows may show publisher or
-reputation warnings. A future release can configure SignTool and Inno Setup with
-an appropriate signing certificate and timestamp service. Keep private keys and
-passwords out of Git. Checksums establish file integrity, not publisher identity.
+Upload the resulting unsigned `IdleSentry_<version>_all.msixbundle` to the existing IdleSentry product in Partner Center. Keep the reserved package name, publisher and startup-task identity unchanged. Leave the fourth version component as zero. Do not upload a standalone Setup.exe, a Velopack package, a test-signed package or private signing material to this MSIX submission.
 
-References: [GitHub Releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases),
-[Inno Setup](https://jrsoftware.org/isinfo.php).
+Create an update submission, replace the previous package bundle, check that x64 and ARM64 validate at the new version, update the Store's release notes, and review submission options before submitting for certification. Microsoft signs approved Store packages. MakeAppx success alone is not Store certification or a Windows App Certification Kit pass.
+
+See [Microsoft's upload instructions](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/upload-app-packages) and [certification process](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-certification-process).
+
+## Source and signing material
+
+Commit source, tests, assets, dependency notices and build scripts. Keep `bin/`, `obj/`, `publish/`, `dist/`, personal settings, local support notes and signing credentials out of source commits and archives.
+
+The standalone installers are unsigned and can show Windows SmartScreen reputation warnings. Checksums establish file integrity, not publisher identity. Store package signing is handled separately by Microsoft during publication.

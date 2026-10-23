@@ -1,3 +1,9 @@
+## 1.0.17 — 2026-10-23
+
+- Show a compact system-idle card with a clock-and-pause icon above the sidebar countdown. Hide it when input resumes or monitoring is paused.
+- Combine apps closed in the same monitoring check into one notification, including every name for small batches. Bound long names and large lists, preserve Unicode characters, and show the exact additional-app count.
+- Verify the idle card, input reset, pause behavior and combined notifications in the Windows VM, with 145 automated checks and real local 1.0.16-to-1.0.17 upgrade rehearsals on native ARM64 and emulated x64. App selections and preferences survive the upgrade.
+
 ## 1.0.16 — 2026-10-21
 
 - Publish a higher standalone version so existing 1.0.15 installations can receive the refreshed countdown, closing queue and hover/focus fixes through the GitHub updater.
