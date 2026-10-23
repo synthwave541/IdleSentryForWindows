@@ -8,7 +8,7 @@ and a bundle for Partner Center. Local testing uses separate test-signed copies.
 [CmdletBinding()]
 param(
     [ValidateSet('x64', 'arm64', 'all')][string]$Arch = 'all',
-    [string]$Version = '1.0.17.0',
+    [string]$Version = '1.0.18.0',
     [string]$OutputDirectory,
     [string]$WindowsSdkVersion = '10.0.26100.0'
 )
@@ -37,7 +37,7 @@ $packages = Join-Path $OutputDirectory 'packages'
 $null = New-Item -ItemType Directory -Path $source, $packages -Force
 # The WPF project has top-level sources/resources; do not copy old bin/obj/publish trees.
 Get-ChildItem -LiteralPath $PSScriptRoot -File |
-    Where-Object { $_.Extension -in '.cs', '.xaml', '.csproj', '.ico', '.png' } |
+    Where-Object { $_.Extension -in '.cs', '.xaml', '.csproj', '.ico', '.png', '.manifest' } |
     Copy-Item -Destination $source
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE') -Destination (Join-Path $OutputDirectory 'LICENSE')

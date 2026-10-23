@@ -371,6 +371,21 @@
                             <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding LaunchAtStartup}" IsEnabled="{Binding CanChangeStartup}" AutomationProperties.Name="Launch at Windows sign-in" VerticalAlignment="Center" />
                         </Grid>
                     </Border>
+                    <Border Style="{StaticResource FluentSettingsCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Alert24" FontSize="20" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" Margin="0,0,14,0" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
+                                <TextBlock Text="Send notifications when apps are closed" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" />
+                                <TextBlock Text="Show a notification after IdleSentry closes monitored apps." FontSize="11.5" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding SendCloseNotifications}" AutomationProperties.Name="Send notifications when apps are closed" VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
                     <!-- Tray Behavior Card -->
                     <Border Style="{StaticResource FluentSettingsCardStyle}">
                         <Grid>

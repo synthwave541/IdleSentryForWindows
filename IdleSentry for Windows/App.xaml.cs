@@ -49,6 +49,7 @@ namespace IdleSentry
 
             // 3. Setup System Tray Icon
             SetupTrayIcon();
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 #if !STORE
             UpdateService.Shared.UpdateFound += version => OnNotificationRequested("IdleSentry update available",
                 $"Version {version} is ready to download. Open About to update when you’re ready.");
@@ -166,7 +167,8 @@ namespace IdleSentry
             TrayIcon.TrayMouseDoubleClick += (s, e) => ShowMainWindow();
 
             // Create context menu
-            var menu = new ContextMenu();
+            var menu = new ContextMenu { Style = (Style)FindResource("TrayContextMenuStyle") };
+            System.Windows.Media.TextOptions.SetTextFormattingMode(menu, System.Windows.Media.TextFormattingMode.Display);
             menu.Opened += ContextMenu_Opened;
             TrayIcon.ContextMenu = menu;
 
@@ -200,7 +202,7 @@ namespace IdleSentry
             try
             {
                 var oldIcon = TrayIcon.Icon;
-                using (var icon = CreateDynamicShieldIcon(isMonitoring))
+                using (var icon = TrayArtwork.Create(isMonitoring))
                 {
                     TrayIcon.Icon = (System.Drawing.Icon)icon.Clone();
                 }
@@ -212,6 +214,15 @@ namespace IdleSentry
             }
         }
 
+        private void OnDisplaySettingsChanged(object? sender, EventArgs e)
+        {
+            if (IsShuttingDown) return;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!IsShuttingDown) UpdateTrayIcon(AppState.IsMonitoring);
+            }));
+        }
+
         private void ContextMenu_Opened(object sender, RoutedEventArgs e)
         {
             if (sender is not ContextMenu menu) return;
@@ -221,8 +232,7 @@ namespace IdleSentry
             var titleItem = new MenuItem
             {
                 Header = $"IdleSentry: {(AppState.IsMonitoring ? "Monitoring" : "Paused")}",
-                IsEnabled = false,
-                FontWeight = FontWeights.Bold
+                IsEnabled = false
             };
             menu.Items.Add(titleItem);
             menu.Items.Add(new Separator());
@@ -250,8 +260,7 @@ namespace IdleSentry
                 var appsHeader = new MenuItem
                 {
                     Header = "Monitored Apps:",
-                    IsEnabled = false,
-                    FontWeight = FontWeights.SemiBold
+                    IsEnabled = false
                 };
                 menu.Items.Add(appsHeader);
 
@@ -353,6 +362,7 @@ namespace IdleSentry
             AppState?.Dispose();
             _trayRetryTimer?.Stop();
             TrayIcon?.Dispose();
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
             _accentWatcher?.Dispose();
             _pipeCts?.Cancel();
             _pipeCts?.Dispose();
@@ -373,71 +383,5 @@ namespace IdleSentry
             base.OnExit(e);
         }
 
-        // Helper to dynamically draw the tray icon
-        private static System.Drawing.Icon CreateDynamicShieldIcon(bool isMonitoring)
-        {
-            using (var bitmap = new System.Drawing.Bitmap(32, 32))
-            using (var g = System.Drawing.Graphics.FromImage(bitmap))
-            {
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                g.Clear(System.Drawing.Color.Transparent);
-
-                // Shield background color (Blue if monitoring, Gray if paused)
-                var shieldColor = isMonitoring ? System.Drawing.Color.FromArgb(0, 120, 215) : System.Drawing.Color.FromArgb(120, 120, 120);
-                var borderColor = System.Drawing.Color.White;
-
-                // Draw Shield geometry
-                using var path = new System.Drawing.Drawing2D.GraphicsPath();
-                path.AddBezier(new System.Drawing.Point(4, 6), new System.Drawing.Point(16, 2), new System.Drawing.Point(16, 2), new System.Drawing.Point(28, 6));
-                path.AddBezier(new System.Drawing.Point(28, 6), new System.Drawing.Point(28, 18), new System.Drawing.Point(24, 26), new System.Drawing.Point(16, 30));
-                path.AddBezier(new System.Drawing.Point(16, 30), new System.Drawing.Point(8, 26), new System.Drawing.Point(4, 18), new System.Drawing.Point(4, 6));
-                path.CloseFigure();
-
-                using (var brush = new System.Drawing.SolidBrush(shieldColor))
-                {
-                    g.FillPath(brush, path);
-                }
-
-                using (var pen = new System.Drawing.Pen(borderColor, 2))
-                {
-                    g.DrawPath(pen, path);
-                }
-
-                if (isMonitoring)
-                {
-                    // Draw a white checkmark inside the shield
-                    using (var checkPen = new System.Drawing.Pen(System.Drawing.Color.White, 2.5f))
-                    {
-                        g.DrawLine(checkPen, 11, 15, 15, 19);
-                        g.DrawLine(checkPen, 15, 19, 21, 11);
-                    }
-                }
-                else
-                {
-                    // Draw a red diagonal pause/stop line
-                    using (var slashPen = new System.Drawing.Pen(System.Drawing.Color.FromArgb(232, 17, 35), 2.5f))
-                    {
-                        g.DrawLine(slashPen, 9, 9, 23, 23);
-                    }
-                }
-
-                IntPtr hIcon = bitmap.GetHicon();
-                try
-                {
-                    using (var tempIcon = System.Drawing.Icon.FromHandle(hIcon))
-                    {
-                        return (System.Drawing.Icon)tempIcon.Clone();
-                    }
-                }
-                finally
-                {
-                    DestroyIcon(hIcon);
-                }
-            }
-        }
-
-        [DllImport("user32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool DestroyIcon(IntPtr hIcon);
     }
 }

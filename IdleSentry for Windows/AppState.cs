@@ -172,6 +172,7 @@ namespace IdleSentry
         private double _systemIdleTime;
         private bool _isCountdownActive;
         private bool _launchAtStartup;
+        private bool _sendCloseNotifications = true;
         private ObservableCollection<AppRunningState> _runningStates = new();
         private ListCollectionView? _closingQueueView;
         private ObservableCollection<AppRunningState>? _closingQueueSource;
@@ -185,6 +186,18 @@ namespace IdleSentry
                 OnPropertyChanged();
                 SaveSettings();
                 ReEvaluateTimerState();
+            }
+        }
+
+        public bool SendCloseNotifications
+        {
+            get => _sendCloseNotifications;
+            set
+            {
+                if (_sendCloseNotifications == value) return;
+                _sendCloseNotifications = value;
+                OnPropertyChanged();
+                SaveSettings();
             }
         }
 
@@ -526,7 +539,7 @@ namespace IdleSentry
                         _timer.Interval = TimeSpan.FromMilliseconds(_currentInterval);
                     }
                     // Notifications cannot prevent the completed state from reaching the UI.
-                    if (result.ClosedApps.Count > 0)
+                    if (SendCloseNotifications && result.ClosedApps.Count > 0)
                     {
                         var notification = CloseNotification.Create(result.ClosedApps);
                         SendNotification(notification.Title, notification.Body);
@@ -1004,6 +1017,7 @@ namespace IdleSentry
                         _quitMethod = settings.QuitMethod;
                         _isMonitoring = settings.IsMonitoring;
                         _launchAtStartup = settings.LaunchAtStartup;
+                        _sendCloseNotifications = settings.SendCloseNotifications;
 
                         if (settings.MonitoredApps != null)
                         {
@@ -1064,6 +1078,7 @@ namespace IdleSentry
                     QuitMethod = QuitMethod,
                     IsMonitoring = IsMonitoring,
                     LaunchAtStartup = LaunchAtStartup,
+                    SendCloseNotifications = SendCloseNotifications,
                     MonitoredApps = MonitoredApps.ToList()
                 };
 
@@ -1081,12 +1096,13 @@ namespace IdleSentry
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
 
-        private class SettingsPayload
+        internal class SettingsPayload
         {
             public double GlobalTimeout { get; set; }
             public int QuitMethod { get; set; }
             public bool IsMonitoring { get; set; }
             public bool LaunchAtStartup { get; set; }
+            public bool SendCloseNotifications { get; set; } = true;
             public List<MonitoredApp>? MonitoredApps { get; set; }
         }
     }

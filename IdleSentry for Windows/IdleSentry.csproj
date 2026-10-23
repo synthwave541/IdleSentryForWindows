@@ -10,12 +10,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>IdleSentry.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
 
     <!-- Assembly Metadata matching macOS release -->
     <AssemblyName>IdleSentry</AssemblyName>
     <RootNamespace>IdleSentry</RootNamespace>
     <!-- Windows patch version. The UI and installer read this assembly metadata. -->
-    <Version>1.0.17</Version>
+    <Version>1.0.18</Version>
     <StartupObject>IdleSentry.Program</StartupObject>
     <Product>IdleSentry</Product>
     <Company>Zennoris</Company>

@@ -37,6 +37,7 @@ internal static class StatusPresentationChecks
         });
         SetField(state, "_globalTimeout", 60d);
         SetField(state, "_isMonitoring", true);
+        SetField(state, "_sendCloseNotifications", true);
         SetField(state, "_isCountdownActive", true);
         SetField(state, "_systemIdleTime", 11.45d);
         return state;
@@ -84,7 +85,12 @@ internal static class StatusPresentationChecks
         {
             Source = new Uri("pack://application:,,,/Wpf.Ui;component/Resources/Wpf.Ui.xaml")
         });
+        application.Resources.MergedDictionaries.Add(new ResourceDictionary
+        {
+            Source = new Uri("pack://application:,,,/IdleSentry;component/TrayMenu.xaml")
+        });
         using var accentWatcher = new WindowsAccentWatcher(application.Dispatcher);
+        TrayArtworkChecks.Run(check);
         check((Color)application.Resources["SystemAccentColor"] == Wpf.Ui.Appearance.ApplicationAccentColorManager.GetColorizationColor(),
             "controls use the Windows system accent instead of the theme placeholder");
         typeof(App).GetProperty(nameof(App.AppState))!.SetValue(application, state = Snapshot());
@@ -97,6 +103,13 @@ internal static class StatusPresentationChecks
         openTrayMenu.Invoke(application, new object[] { trayMenu, new RoutedEventArgs() });
         check(!trayMenu.Items.OfType<MenuItem>().Any(item => Regex.IsMatch(item.Header?.ToString() ?? string.Empty, @"\d{2,}:\d{2}")),
             "paused tray menu does not show a countdown");
+        trayMenu.Style = (Style)application.FindResource("TrayContextMenuStyle");
+        trayMenu.IsOpen = true;
+        trayMenu.Dispatcher.Invoke(() => { }, DispatcherPriority.Background);
+        trayMenu.UpdateLayout();
+        SavePreview(trayMenu, previewDirectory, "tray-menu-paused.png",
+            (int)Math.Ceiling(trayMenu.ActualWidth), (int)Math.Ceiling(trayMenu.ActualHeight));
+        trayMenu.IsOpen = false;
         var windowState = Snapshot();
         var window = new MainWindow(windowState);
         var root = (FrameworkElement)window.Content;
@@ -212,6 +225,13 @@ internal static class StatusPresentationChecks
             check(timerCount == 1, $"page {page} has exactly one visible countdown");
             if (page == 0) SavePreview(root, previewDirectory, "dashboard-countdown.png", 960, 680);
             if (page == 2) SavePreview(root, previewDirectory, "rules-countdown.png", 960, 680);
+            if (page == 3)
+            {
+                var notifications = Descendants<Wpf.Ui.Controls.ToggleSwitch>(frame).Single(toggle =>
+                    System.Windows.Automation.AutomationProperties.GetName(toggle) == "Send notifications when apps are closed");
+                check(notifications.IsChecked == true, "System and Startup notification toggle binds to its enabled default");
+                SavePreview(root, previewDirectory, "system-notifications.png", 960, 680);
+            }
         }
         VerifyQueuePopup(check, previewDirectory);
         var urgent = Snapshot();

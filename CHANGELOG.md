@@ -1,3 +1,9 @@
+## 1.0.18 — 2026-10-23
+
+- Render the tray menu with per-monitor DPI awareness and pixel-aligned text, avoiding Windows bitmap scaling on high-DPI displays.
+- Use the original IdleSentry artwork in the tray, with native icon frames from 16 to 64 pixels. Desaturate the same logo when monitoring is paused.
+- Add “Send notifications when apps are closed” in System & Startup. It defaults to enabled for new and existing users, saves the choice, and leaves app closing active when disabled.
+
 ## 1.0.17 — 2026-10-23
 
 - Show a compact system-idle card with a clock-and-pause icon above the sidebar countdown. Hide it when input resumes or monitoring is paused.

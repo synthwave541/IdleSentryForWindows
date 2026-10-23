@@ -10,6 +10,34 @@ permissions:
   contents: read
 
 jobs:
+  store:
+    name: Build and validate Microsoft Store bundle
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: 8.0.x
+      - name: Build and validate both Store architectures
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content './IdleSentry for Windows/IdleSentry.csproj' -Raw
+          $version = [string]$project.Project.PropertyGroup.Version
+          & './IdleSentry for Windows/build-store.ps1' -Arch all -Version "$version.0" -OutputDirectory (Join-Path $env:RUNNER_TEMP 'IdleSentry-Store')
+          $bundle = Join-Path $env:RUNNER_TEMP "IdleSentry-Store/IdleSentry_${version}.0_all.msixbundle"
+          $hash = (Get-FileHash -LiteralPath $bundle -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $([IO.Path]::GetFileName($bundle))" | Set-Content (Join-Path $env:RUNNER_TEMP 'IdleSentry-Store/SHA256SUMS.txt') -Encoding utf8
+      - name: Upload Store submission bundle
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: IdleSentry-Microsoft-Store
+          path: |
+            ${{ runner.temp }}/IdleSentry-Store/*.msixbundle
+            ${{ runner.temp }}/IdleSentry-Store/SHA256SUMS.txt
+          if-no-files-found: error
   build:
     name: Verify and publish x64 and ARM64
     runs-on: windows-latest

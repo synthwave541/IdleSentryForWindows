@@ -54,6 +54,12 @@ internal static class MonitoringLifecycleChecks
     private static async Task RunAsync(Action<bool, string> check)
     {
         var single = CloseNotification.Create(new[] { "Editor" });
+        check(new AppState(initialize: false).SendCloseNotifications, "close notifications default to enabled");
+        var legacySettings = System.Text.Json.JsonSerializer.Deserialize<AppState.SettingsPayload>("{\"IsMonitoring\":true}")!;
+        check(legacySettings.SendCloseNotifications, "upgrading legacy settings keeps close notifications enabled");
+        var savedPreference = System.Text.Json.JsonSerializer.Deserialize<AppState.SettingsPayload>(
+            System.Text.Json.JsonSerializer.Serialize(new AppState.SettingsPayload { SendCloseNotifications = false }))!;
+        check(!savedPreference.SendCloseNotifications, "disabled close notification preference survives JSON round trip");
         check(single.Title == "App Closed Automatically" && single.Body == "Editor was closed after inactivity.",
             "single-app notification retains singular wording");
         var few = CloseNotification.Create(new[] { "Editor", "Browser", "Calculator" });
@@ -163,6 +169,24 @@ internal static class MonitoringLifecycleChecks
             check(batch.IsSystemIdle, "idle indicator remains visible after the last monitored app closes");
             await batch.RefreshStatesAsync(0);
             check(!batch.IsSystemIdle, "new input clears idle after all monitored apps have closed");
+            using var quiet = new AppState(initialize: false);
+            foreach (var app in batch.MonitoredApps) quiet.MonitoredApps.Add(app);
+            quiet.RequestNotification += (title, body) => messages.Add((title, body));
+            typeof(AppState).GetField("_sendCloseNotifications", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(quiet, false);
+            var quietFirst = Start(target);
+            var quietNext = Start(next);
+            await quiet.RefreshStatesAsync(AppState.CountdownDelay + 11);
+            check(quietFirst.HasExited && quietNext.HasExited && quiet.RunningAppsCount == 0 && messages.Count == 1,
+                "disabled notifications still close both apps and update state without emitting a notice");
+            typeof(AppState).GetField("_sendCloseNotifications", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(quiet, true);
+            string resumedPath = Path.Combine(fixtures, "IdleSentryTestResumed.exe");
+            File.Copy(target, resumedPath);
+            quiet.MonitoredApps.Clear();
+            quiet.MonitoredApps.Add(new MonitoredApp { Name = "Example Editor", Path = resumedPath, CustomTimeout = 10 });
+            var resumed = Start(resumedPath);
+            await quiet.RefreshStatesAsync(AppState.CountdownDelay + 11);
+            check(resumed.HasExited && messages.Count == 2 && messages[1].Body.Contains("Example Editor"),
+                "reenabling close notifications takes effect on the next closure");
         }
         finally
         {

@@ -34,7 +34,7 @@ Local update rehearsals validate package discovery, integrity, application repla
 
 The Store build is a separate distribution channel. It uses package-owned settings, Windows startup tasks and Microsoft Store updates, with no Velopack dependency.
 
-Run `build-store.ps1 -Arch all -Version <major.minor.patch.0>` on Windows with .NET 8 and Windows SDK 10.0.26100.0. Use a fresh local output directory. The script builds both architectures, generates shell assets and a PRI resource index, and runs MakeAppx validation for each MSIX and the combined bundle.
+The Windows build workflow also produces an `IdleSentry-Microsoft-Store` artifact containing the unsigned combined bundle and its SHA-256 hash. This allows package compilation without consuming local VM storage. For local builds, run `build-store.ps1 -Arch all -Version <major.minor.patch.0>` on Windows with .NET 8 and Windows SDK 10.0.26100.0. Use a fresh local output directory. The script builds both architectures, generates shell assets and a PRI resource index, and runs MakeAppx validation for each MSIX and the combined bundle.
 
 Upload the resulting unsigned `IdleSentry_<version>_all.msixbundle` to the existing IdleSentry product in Partner Center. Keep the reserved package name, publisher and startup-task identity unchanged. Leave the fourth version component as zero. Do not upload a standalone Setup.exe, a Velopack package, a test-signed package or private signing material to this MSIX submission.
 
