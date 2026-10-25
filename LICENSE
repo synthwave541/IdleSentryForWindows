@@ -1,0 +1,36 @@
+IdleSentry Proprietary Software License
+Copyright (c) 2026 Anush Vishwakarma / Zennoris. All rights reserved.
+Effective for new proprietary releases: macOS 1.0.21 and Windows 1.0.20 onward.
+
+1. End-user permission
+You may download official IdleSentry binaries, install and use them for personal
+or internal business purposes, and make reasonable backup copies, free of charge.
+This permission does not transfer ownership of the software or its branding.
+
+2. Reserved rights
+Except as permitted by applicable law or expressly authorized in writing by
+Anush Vishwakarma, you may not redistribute, sell, sublicense, modify, publish,
+or create derivative works of the proprietary software, or access or disclose
+its private source code. You may not reverse engineer, decompile, or disassemble
+the proprietary software except to the extent applicable law permits it despite
+this restriction. No trademark or endorsement rights are granted.
+
+3. Third-party and historical rights
+Third-party components retain their own licenses and notices. These terms do not
+restrict permissions granted by those licenses. Versions and source previously
+released under Apache License 2.0 retain those terms; this license does not revoke
+or retroactively change permissions already granted for those releases. The
+historical Apache license is retained in legal/APACHE-2.0-LEGACY.txt in the private
+source repository. Published dependency notices accompany current distributions.
+
+4. Warranty and liability
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE COPYRIGHT HOLDERS
+ARE NOT LIABLE FOR CLAIMS OR DAMAGES ARISING FROM USE OF THE SOFTWARE. NOTHING
+HERE EXCLUDES RIGHTS OR LIABILITY THAT APPLICABLE LAW DOES NOT ALLOW TO BE
+EXCLUDED. Save your work before using automatic app actions.
+
+5. Permission requests
+Contact Anush Vishwakarma through https://zennoris.com or
+https://github.com/synthwave541 for uses outside this license.
